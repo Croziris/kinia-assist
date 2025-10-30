@@ -75,26 +75,53 @@ export default function BilanNew() {
       
       console.log("Statut response:", response.status);
       
-      if (!response.ok && response.status !== 400) {
-        throw new Error(`Erreur serveur: ${response.status}`);
-      }
-      
+      // IMPORTANT : Parser la réponse DANS TOUS LES CAS
       const result = await response.json();
       console.log("Résultat:", result);
       
-      // 4. Gérer les erreurs RGPD (HTTP 400 + success: false)
+      // 4. Gérer TOUTES les réponses (400 ou autre)
       if (!result.success) {
         if (result.error === "PII_DETECTED") {
-          setError("⚠️ Données sensibles détectées dans vos notes !");
+          // Construire un message détaillé avec les données détectées
+          let errorMessage = "⚠️ Données sensibles détectées !\n\n";
+          
+          if (result.details && result.details.length > 0) {
+            errorMessage += "Veuillez retirer les éléments suivants :\n";
+            result.details.forEach((detail: string) => {
+              errorMessage += `• ${detail}\n`;
+            });
+          }
+          
+          if (result.help) {
+            errorMessage += "\n💡 Rappel :\n";
+            errorMessage += "✅ Autorisé : Âge (45 ans), profession générale, initiales\n";
+            errorMessage += "❌ Interdit : Nom complet, date de naissance, téléphone";
+          }
+          
+          setError(errorMessage);
           setPiiDetails(result.details || []);
+          
+          // Toast pour plus de visibilité
+          toast({
+            title: "❌ Données personnelles détectées",
+            description: "Veuillez modifier vos notes et retirer les informations sensibles",
+            variant: "destructive",
+            duration: 10000,
+          });
+          
           setIsGenerating(false);
           return;
         } else {
-          throw new Error(result.message || "Erreur inconnue");
+          throw new Error(result.message || "Erreur lors de la génération");
         }
       }
       
-      // 5. Créer le bilan dans Supabase
+      // 5. Si succès, continuer normalement
+      if (!result.markdown) {
+        throw new Error("Aucun contenu généré");
+      }
+      
+      // 6. Créer le bilan dans Supabase
       const { data: bilan, error: insertError } = await supabase
         .from("bilans")
         .insert({
@@ -107,7 +134,7 @@ export default function BilanNew() {
       
       if (insertError) throw insertError;
       
-      // 6. Décrémenter le quota si free
+      // 7. Décrémenter le quota si free
       if (profile?.plan === "free") {
         await supabase
           .from("profiles")
@@ -115,14 +142,14 @@ export default function BilanNew() {
           .eq("id", user.id);
       }
       
-      // 7. Logger l'utilisation
+      // 8. Logger l'utilisation
       await supabase.from("usage_logs").insert({
         kine_id: user.id,
         action_type: "bilan_generate",
         details: { bilan_id: bilan.id },
       });
       
-      // 8. Succès : redirection
+      // 9. Succès : redirection
       toast({
         title: "✅ Bilan généré !",
         description: "Vous pouvez maintenant le valider et le modifier.",
@@ -203,18 +230,51 @@ export default function BilanNew() {
               </AlertDescription>
             </Alert>
             
-            {/* Affichage erreur RGPD */}
-            {error && piiDetails.length > 0 && (
-              <Alert variant="destructive">
-                <AlertDescription>
-                  <p className="font-bold mb-2">{error}</p>
-                  <p className="text-sm mb-2">Veuillez retirer les éléments suivants :</p>
-                  <ul className="list-disc list-inside text-sm space-y-1">
-                    {piiDetails.map((detail, idx) => (
-                      <li key={idx}>{detail}</li>
-                    ))}
-                  </ul>
-                </AlertDescription>
+            {/* Affichage erreur RGPD amélioré */}
+            {error && (
+              <Alert variant="destructive" className="border-red-500 bg-red-50">
+                <AlertTriangle className="h-5 w-5" />
+                <div className="space-y-3">
+                  <AlertDescription className="whitespace-pre-line font-medium text-sm">
+                    {error}
+                  </AlertDescription>
+                  
+                  {/* Guide de correction visuel */}
+                  <div className="p-3 bg-white rounded border border-red-200">
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <p className="font-semibold text-green-700 mb-1">✅ Exemples autorisés :</p>
+                        <ul className="space-y-1 text-gray-600">
+                          <li>• "Patient de 45 ans"</li>
+                          <li>• "Homme retraité"</li>
+                          <li>• "Région parisienne"</li>
+                          <li>• "Initiales M.D."</li>
+                        </ul>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-red-700 mb-1">❌ Exemples interdits :</p>
+                        <ul className="space-y-1 text-gray-600">
+                          <li>• "M. Jean Dupont"</li>
+                          <li>• "Né le 12/03/1978"</li>
+                          <li>• "06.12.34.56.78"</li>
+                          <li>• "15 rue de la Paix"</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="w-full"
+                    onClick={() => {
+                      setError(null);
+                      setPiiDetails([]);
+                    }}
+                  >
+                    Compris, je vais corriger mes notes
+                  </Button>
+                </div>
               </Alert>
             )}
             
