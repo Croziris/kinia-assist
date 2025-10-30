@@ -9,18 +9,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { User, Settings, LogOut } from "lucide-react";
+import { Settings, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
-interface HeaderProps {
-  isPremium?: boolean;
-  userEmail?: string;
-}
-
-export function Header({ isPremium = false, userEmail }: HeaderProps) {
+export function Header() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, profile } = useAuth();
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -35,9 +32,17 @@ export function Header({ isPremium = false, userEmail }: HeaderProps) {
     }
   };
 
-  const initials = userEmail 
-    ? userEmail.substring(0, 2).toUpperCase() 
-    : "U";
+  const getInitials = () => {
+    if (profile?.nom && profile?.prenom) {
+      return `${profile.prenom[0]}${profile.nom[0]}`.toUpperCase();
+    }
+    if (user?.email) {
+      return user.email.substring(0, 2).toUpperCase();
+    }
+    return "U";
+  };
+
+  const isPremium = profile?.plan === "premium";
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60">
@@ -72,18 +77,23 @@ export function Header({ isPremium = false, userEmail }: HeaderProps) {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-full">
+              <Button variant="ghost" className="flex items-center gap-2 rounded-full">
                 <Avatar className="h-8 w-8">
-                  <AvatarFallback>{initials}</AvatarFallback>
+                  <AvatarFallback>{getInitials()}</AvatarFallback>
                 </Avatar>
+                <span className="hidden md:inline text-sm">
+                  {profile?.prenom && profile?.nom
+                    ? `${profile.prenom} ${profile.nom}`
+                    : user?.email}
+                </span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <div className="px-2 py-1.5 text-sm">
                 <div className="font-medium">Mon compte</div>
-                {userEmail && (
+                {user?.email && (
                   <div className="text-xs text-muted-foreground truncate">
-                    {userEmail}
+                    {user.email}
                   </div>
                 )}
               </div>

@@ -177,24 +177,42 @@ export type Database = {
       }
       profiles: {
         Row: {
+          adresse: string | null
           created_at: string
           credits_free: number
           id: string
+          nom: string | null
           plan: Database["public"]["Enums"]["user_plan"]
+          plan_expires_at: string | null
+          prenom: string | null
+          rpps: string | null
+          telephone: string | null
           updated_at: string
         }
         Insert: {
+          adresse?: string | null
           created_at?: string
           credits_free?: number
           id: string
+          nom?: string | null
           plan?: Database["public"]["Enums"]["user_plan"]
+          plan_expires_at?: string | null
+          prenom?: string | null
+          rpps?: string | null
+          telephone?: string | null
           updated_at?: string
         }
         Update: {
+          adresse?: string | null
           created_at?: string
           credits_free?: number
           id?: string
+          nom?: string | null
           plan?: Database["public"]["Enums"]["user_plan"]
+          plan_expires_at?: string | null
+          prenom?: string | null
+          rpps?: string | null
+          telephone?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -252,7 +270,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_email: { Args: { user_id: string }; Returns: string }
     }
     Enums: {
       chatbot_type:

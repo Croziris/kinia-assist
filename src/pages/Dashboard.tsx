@@ -117,7 +117,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header isPremium={isPremium} userEmail={userEmail} />
+      <Header />
 
       <main className="container mx-auto px-4 py-8 space-y-12">
         {/* Hero Section - Générateur de bilans */}
