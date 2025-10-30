@@ -35,7 +35,12 @@ export default function BilanValidate() {
       if (error) throw error;
       
       setBilan(data);
-      setEditedContent(data.contenu_markdown || data.contenu_json?.notes_brutes || "");
+      // @ts-ignore - contenu_markdown sera disponible après régénération des types
+      const markdown = data.contenu_markdown || "";
+      const jsonContent = data.contenu_json && typeof data.contenu_json === 'object' && 'notes_brutes' in data.contenu_json 
+        ? (data.contenu_json as any).notes_brutes 
+        : "";
+      setEditedContent(markdown || jsonContent);
     } catch (err) {
       console.error("Erreur chargement bilan:", err);
       toast({
@@ -50,6 +55,7 @@ export default function BilanValidate() {
   
   const handleSave = async () => {
     try {
+      // @ts-ignore - contenu_markdown sera disponible après régénération des types
       const { error } = await supabase
         .from("bilans")
         .update({ contenu_markdown: editedContent })
@@ -168,6 +174,7 @@ export default function BilanValidate() {
                 />
               ) : (
                 <div className="prose prose-sm max-w-none">
+                  {/* @ts-ignore - contenu_markdown sera disponible après régénération des types */}
                   <ReactMarkdown>{bilan.contenu_markdown || editedContent}</ReactMarkdown>
                 </div>
               )}

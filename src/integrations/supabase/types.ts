@@ -17,6 +17,7 @@ export type Database = {
       bilans: {
         Row: {
           contenu_json: Json | null
+          contenu_markdown: string | null
           created_at: string
           fichier_url: string | null
           id: string
@@ -28,6 +29,7 @@ export type Database = {
         }
         Insert: {
           contenu_json?: Json | null
+          contenu_markdown?: string | null
           created_at?: string
           fichier_url?: string | null
           id?: string
@@ -39,6 +41,7 @@ export type Database = {
         }
         Update: {
           contenu_json?: Json | null
+          contenu_markdown?: string | null
           created_at?: string
           fichier_url?: string | null
           id?: string
