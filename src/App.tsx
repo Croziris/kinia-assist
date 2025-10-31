@@ -49,6 +49,7 @@ function AppLayout() {
         .single();
 
       // Si pas de nom/prénom ou onboarding non complété
+      // @ts-ignore - onboarding_completed column will be available after types refresh
       if (data && (!data.nom || !data.prenom || !data.onboarding_completed)) {
         setNeedsOnboarding(true);
       } else {

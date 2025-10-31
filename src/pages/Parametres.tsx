@@ -24,6 +24,7 @@ export default function Parametres() {
     rpps: profile?.rpps || "",
     adresse: profile?.adresse || "",
     telephone: profile?.telephone || "",
+    // @ts-ignore - logo_url column will be available after types refresh
     logo_url: profile?.logo_url || "",
   });
 

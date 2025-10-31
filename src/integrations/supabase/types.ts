@@ -184,7 +184,9 @@ export type Database = {
           created_at: string
           credits_free: number
           id: string
+          logo_url: string | null
           nom: string | null
+          onboarding_completed: boolean | null
           plan: Database["public"]["Enums"]["user_plan"]
           plan_expires_at: string | null
           prenom: string | null
@@ -197,7 +199,9 @@ export type Database = {
           created_at?: string
           credits_free?: number
           id: string
+          logo_url?: string | null
           nom?: string | null
+          onboarding_completed?: boolean | null
           plan?: Database["public"]["Enums"]["user_plan"]
           plan_expires_at?: string | null
           prenom?: string | null
@@ -210,7 +214,9 @@ export type Database = {
           created_at?: string
           credits_free?: number
           id?: string
+          logo_url?: string | null
           nom?: string | null
+          onboarding_completed?: boolean | null
           plan?: Database["public"]["Enums"]["user_plan"]
           plan_expires_at?: string | null
           prenom?: string | null

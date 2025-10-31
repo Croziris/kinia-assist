@@ -40,6 +40,7 @@ export default function Onboarding() {
       if (!user) throw new Error("Non authentifié");
       
       // Sauvegarder les infos
+      // @ts-ignore - onboarding_completed column will be available after types refresh
       const { error } = await supabase
         .from("profiles")
         .update({
