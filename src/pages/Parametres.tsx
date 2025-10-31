@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Sparkles, Calendar, TrendingUp } from "lucide-react";
@@ -16,17 +16,32 @@ export default function Parametres() {
   const { user, profile, refreshProfile } = useAuth();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   
   const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
-    prenom: profile?.prenom || "",
-    nom: profile?.nom || "",
-    rpps: profile?.rpps || "",
-    adresse: profile?.adresse || "",
-    telephone: profile?.telephone || "",
-    // @ts-ignore - logo_url column will be available after types refresh
-    logo_url: profile?.logo_url || "",
+    prenom: "",
+    nom: "",
+    rpps: "",
+    adresse: "",
+    telephone: "",
+    logo_url: "",
   });
+
+  // Synchroniser formData avec le profil quand il se charge
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        prenom: profile.prenom || "",
+        nom: profile.nom || "",
+        rpps: profile.rpps || "",
+        adresse: profile.adresse || "",
+        telephone: profile.telephone || "",
+        // @ts-ignore - logo_url column will be available after types refresh
+        logo_url: profile.logo_url || "",
+      });
+    }
+  }, [profile]);
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -104,7 +119,8 @@ export default function Parametres() {
         description: "Vos informations ont été enregistrées avec succès.",
       });
       
-      refreshProfile();
+      await refreshProfile();
+      setIsEditing(false);
     } catch (error) {
       console.error("Error updating profile:", error);
       toast({
@@ -115,6 +131,22 @@ export default function Parametres() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleCancel = () => {
+    // Réinitialiser les données avec le profil actuel
+    if (profile) {
+      setFormData({
+        prenom: profile.prenom || "",
+        nom: profile.nom || "",
+        rpps: profile.rpps || "",
+        adresse: profile.adresse || "",
+        telephone: profile.telephone || "",
+        // @ts-ignore
+        logo_url: profile.logo_url || "",
+      });
+    }
+    setIsEditing(false);
   };
 
   const handlePasswordReset = async () => {
@@ -163,10 +195,11 @@ export default function Parametres() {
               <CardHeader>
                 <CardTitle>📝 Informations professionnelles</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
                 {/* Logo cabinet */}
-                  <div className="space-y-2">
-                    <Label>Logo du cabinet</Label>
+                <div className="space-y-2">
+                  <Label>Logo du cabinet</Label>
+                  {isEditing ? (
                     <div className="flex items-center gap-4">
                       {formData.logo_url && (
                         <img 
@@ -189,49 +222,70 @@ export default function Parametres() {
                       </div>
                       {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
                     </div>
-                  </div>
+                  ) : (
+                    <div className="flex items-center gap-4">
+                      {formData.logo_url ? (
+                        <img 
+                          src={formData.logo_url} 
+                          alt="Logo" 
+                          className="h-16 w-16 rounded object-contain border"
+                        />
+                      ) : (
+                        <div className="h-16 w-16 rounded border border-dashed flex items-center justify-center text-muted-foreground text-xs">
+                          Aucun logo
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
 
-                {/* Prénom en PREMIER avec bon autocomplete */}
+                {/* Prénom et Nom */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="prenom">Prénom *</Label>
-                    <Input
-                      id="prenom"
-                      name="given-name"
-                      autoComplete="given-name"
-                      value={formData.prenom}
-                      onChange={(e) =>
-                        setFormData({ ...formData, prenom: e.target.value })
-                      }
-                      placeholder="Jean"
-                      required
-                    />
+                    <Label>Prénom</Label>
+                    {isEditing ? (
+                      <Input
+                        name="given-name"
+                        autoComplete="given-name"
+                        value={formData.prenom}
+                        onChange={(e) =>
+                          setFormData({ ...formData, prenom: e.target.value })
+                        }
+                        placeholder="Jean"
+                      />
+                    ) : (
+                      <p className="text-sm py-2 px-3 bg-muted rounded-md">
+                        {formData.prenom || "Non renseigné"}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="nom">Nom *</Label>
-                    <Input
-                      id="nom"
-                      name="family-name"
-                      autoComplete="family-name"
-                      value={formData.nom}
-                      onChange={(e) =>
-                        setFormData({ ...formData, nom: e.target.value })
-                      }
-                      placeholder="Dupont"
-                      required
-                    />
+                    <Label>Nom</Label>
+                    {isEditing ? (
+                      <Input
+                        name="family-name"
+                        autoComplete="family-name"
+                        value={formData.nom}
+                        onChange={(e) =>
+                          setFormData({ ...formData, nom: e.target.value })
+                        }
+                        placeholder="Dupont"
+                      />
+                    ) : (
+                      <p className="text-sm py-2 px-3 bg-muted rounded-md">
+                        {formData.nom || "Non renseigné"}
+                      </p>
+                    )}
                   </div>
                 </div>
 
+                {/* Email */}
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    value={user?.email || ""}
-                    disabled
-                    className="bg-muted"
-                  />
+                  <Label>Email</Label>
+                  <p className="text-sm py-2 px-3 bg-muted rounded-md">
+                    {user?.email || "Non renseigné"}
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     L'email ne peut pas être modifié
                   </p>
@@ -239,64 +293,102 @@ export default function Parametres() {
 
                 {/* RPPS */}
                 <div className="space-y-2">
-                  <Label htmlFor="rpps">Numéro RPPS</Label>
-                  <Input
-                    id="rpps"
-                    value={formData.rpps}
-                    onChange={(e) =>
-                      setFormData({ ...formData, rpps: e.target.value })
-                    }
-                    placeholder="12345678901"
-                    maxLength={11}
-                    pattern="[0-9]{11}"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    11 chiffres - Requis pour les bilans officiels
-                  </p>
+                  <Label>Numéro RPPS</Label>
+                  {isEditing ? (
+                    <>
+                      <Input
+                        value={formData.rpps}
+                        onChange={(e) =>
+                          setFormData({ ...formData, rpps: e.target.value })
+                        }
+                        placeholder="12345678901"
+                        maxLength={11}
+                        pattern="[0-9]{11}"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        11 chiffres - Requis pour les bilans officiels
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-sm py-2 px-3 bg-muted rounded-md">
+                      {formData.rpps || "Non renseigné"}
+                    </p>
+                  )}
                 </div>
 
                 {/* Téléphone */}
                 <div className="space-y-2">
-                  <Label htmlFor="telephone">Téléphone professionnel</Label>
-                  <Input
-                    id="telephone"
-                    type="tel"
-                    autoComplete="tel"
-                    value={formData.telephone}
-                    onChange={(e) =>
-                      setFormData({ ...formData, telephone: e.target.value })
-                    }
-                    placeholder="06 12 34 56 78"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="adresse">Adresse du cabinet</Label>
-                  <Textarea
-                    id="adresse"
-                    value={formData.adresse}
-                    onChange={(e) =>
-                      setFormData({ ...formData, adresse: e.target.value })
-                    }
-                    placeholder="123 rue de la Santé&#10;75014 Paris"
-                    className="min-h-[100px]"
-                  />
-                </div>
-
-                <Button 
-                  onClick={handleSave} 
-                  disabled={isSaving} 
-                  className="w-full sm:w-auto bg-[#8B9D83] hover:bg-[#7a8a72]"
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Enregistrement...
-                    </>
+                  <Label>Téléphone professionnel</Label>
+                  {isEditing ? (
+                    <Input
+                      type="tel"
+                      autoComplete="tel"
+                      value={formData.telephone}
+                      onChange={(e) =>
+                        setFormData({ ...formData, telephone: e.target.value })
+                      }
+                      placeholder="06 12 34 56 78"
+                    />
                   ) : (
-                    "Enregistrer les modifications"
+                    <p className="text-sm py-2 px-3 bg-muted rounded-md">
+                      {formData.telephone || "Non renseigné"}
+                    </p>
                   )}
-                </Button>
+                </div>
+
+                {/* Adresse */}
+                <div className="space-y-2">
+                  <Label>Adresse du cabinet</Label>
+                  {isEditing ? (
+                    <Textarea
+                      value={formData.adresse}
+                      onChange={(e) =>
+                        setFormData({ ...formData, adresse: e.target.value })
+                      }
+                      placeholder="123 rue de la Santé&#10;75014 Paris"
+                      className="min-h-[100px]"
+                    />
+                  ) : (
+                    <p className="text-sm py-2 px-3 bg-muted rounded-md whitespace-pre-wrap">
+                      {formData.adresse || "Non renseigné"}
+                    </p>
+                  )}
+                </div>
+
+                {/* Boutons */}
+                {isEditing ? (
+                  <div className="flex gap-3 pt-2">
+                    <Button 
+                      variant="outline"
+                      onClick={handleCancel}
+                      disabled={isSaving}
+                      className="flex-1 sm:flex-none"
+                    >
+                      Annuler
+                    </Button>
+                    <Button 
+                      onClick={handleSave} 
+                      disabled={isSaving} 
+                      className="flex-1 sm:flex-none bg-[#8B9D83] hover:bg-[#7a8a72]"
+                    >
+                      {isSaving ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Enregistrement...
+                        </>
+                      ) : (
+                        "Enregistrer"
+                      )}
+                    </Button>
+                  </div>
+                ) : (
+                  <Button 
+                    onClick={() => setIsEditing(true)}
+                    className="w-full sm:w-auto bg-[#8B9D83] hover:bg-[#7a8a72]"
+                  >
+                    Modifier mes informations
+                  </Button>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
