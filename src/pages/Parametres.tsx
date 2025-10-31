@@ -17,13 +17,67 @@ export default function Parametres() {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   
+  const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
-    nom: profile?.nom || "",
     prenom: profile?.prenom || "",
+    nom: profile?.nom || "",
     rpps: profile?.rpps || "",
     adresse: profile?.adresse || "",
     telephone: profile?.telephone || "",
+    logo_url: profile?.logo_url || "",
   });
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Vérifier la taille (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "Fichier trop volumineux",
+        description: "Le logo ne doit pas dépasser 2MB",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setUploading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Non authentifié");
+      
+      // Upload vers Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-logo.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('logos')
+        .upload(fileName, file, { upsert: true });
+      
+      if (uploadError) throw uploadError;
+      
+      // Récupérer l'URL publique
+      const { data: { publicUrl } } = supabase.storage
+        .from('logos')
+        .getPublicUrl(fileName);
+      
+      setFormData(prev => ({ ...prev, logo_url: publicUrl }));
+      
+      toast({
+        title: "✅ Logo uploadé",
+        description: "N'oubliez pas d'enregistrer vos modifications",
+      });
+    } catch (error) {
+      console.error("Erreur upload:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'uploader le logo",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!user?.id) return;
@@ -32,13 +86,20 @@ export default function Parametres() {
     try {
       const { error } = await supabase
         .from("profiles")
-        .update(formData)
+        .update({
+          prenom: formData.prenom,
+          nom: formData.nom,
+          rpps: formData.rpps,
+          adresse: formData.adresse,
+          telephone: formData.telephone,
+          logo_url: formData.logo_url,
+        })
         .eq("id", user.id);
 
       if (error) throw error;
 
       toast({
-        title: "Profil mis à jour",
+        title: "✅ Profil mis à jour",
         description: "Vos informations ont été enregistrées avec succès.",
       });
       
@@ -102,16 +163,47 @@ export default function Parametres() {
                 <CardTitle>📝 Informations professionnelles</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                {/* Logo cabinet */}
+                <div className="space-y-2">
+                  <Label>Logo du cabinet</Label>
+                  <div className="flex items-center gap-4">
+                    {formData.logo_url && (
+                      <img 
+                        src={formData.logo_url} 
+                        alt="Logo" 
+                        className="h-16 w-16 rounded object-contain border"
+                      />
+                    )}
+                    <div className="flex-1">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoUpload}
+                        disabled={uploading}
+                        className="cursor-pointer"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        PNG, JPG ou SVG. Max 2MB.
+                      </p>
+                    </div>
+                    {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
+                  </div>
+                </div>
+
+                {/* Prénom en PREMIER avec bon autocomplete */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="prenom">Prénom *</Label>
                     <Input
                       id="prenom"
+                      name="given-name"
+                      autoComplete="given-name"
                       value={formData.prenom}
                       onChange={(e) =>
                         setFormData({ ...formData, prenom: e.target.value })
                       }
                       placeholder="Jean"
+                      required
                     />
                   </div>
 
@@ -119,11 +211,14 @@ export default function Parametres() {
                     <Label htmlFor="nom">Nom *</Label>
                     <Input
                       id="nom"
+                      name="family-name"
+                      autoComplete="family-name"
                       value={formData.nom}
                       onChange={(e) =>
                         setFormData({ ...formData, nom: e.target.value })
                       }
                       placeholder="Dupont"
+                      required
                     />
                   </div>
                 </div>
@@ -141,32 +236,37 @@ export default function Parametres() {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="rpps">N° RPPS</Label>
-                    <Input
-                      id="rpps"
-                      value={formData.rpps}
-                      onChange={(e) =>
-                        setFormData({ ...formData, rpps: e.target.value })
-                      }
-                      placeholder="12345678901"
-                      maxLength={11}
-                    />
-                    <p className="text-xs text-muted-foreground">11 chiffres</p>
-                  </div>
+                {/* RPPS */}
+                <div className="space-y-2">
+                  <Label htmlFor="rpps">Numéro RPPS</Label>
+                  <Input
+                    id="rpps"
+                    value={formData.rpps}
+                    onChange={(e) =>
+                      setFormData({ ...formData, rpps: e.target.value })
+                    }
+                    placeholder="12345678901"
+                    maxLength={11}
+                    pattern="[0-9]{11}"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    11 chiffres - Requis pour les bilans officiels
+                  </p>
+                </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="telephone">Téléphone</Label>
-                    <Input
-                      id="telephone"
-                      value={formData.telephone}
-                      onChange={(e) =>
-                        setFormData({ ...formData, telephone: e.target.value })
-                      }
-                      placeholder="06 12 34 56 78"
-                    />
-                  </div>
+                {/* Téléphone */}
+                <div className="space-y-2">
+                  <Label htmlFor="telephone">Téléphone professionnel</Label>
+                  <Input
+                    id="telephone"
+                    type="tel"
+                    autoComplete="tel"
+                    value={formData.telephone}
+                    onChange={(e) =>
+                      setFormData({ ...formData, telephone: e.target.value })
+                    }
+                    placeholder="06 12 34 56 78"
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -182,7 +282,11 @@ export default function Parametres() {
                   />
                 </div>
 
-                <Button onClick={handleSave} disabled={isSaving} className="w-full">
+                <Button 
+                  onClick={handleSave} 
+                  disabled={isSaving} 
+                  className="w-full sm:w-auto bg-[#8B9D83] hover:bg-[#7a8a72]"
+                >
                   {isSaving ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

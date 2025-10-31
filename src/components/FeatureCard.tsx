@@ -13,13 +13,13 @@ interface FeatureCardProps {
 export function FeatureCard({ title, description, icon, onClick, variant = "default" }: FeatureCardProps) {
   if (variant === "hero") {
     return (
-      <Card className="p-8 bg-gradient-to-br from-primary/10 to-accent/10 border-2 border-primary/20 hover:border-primary/40 transition-all">
+      <Card className="p-6 lg:p-8 bg-gradient-to-br from-primary/10 to-accent/10 border-2 border-primary/20 hover:border-primary/40 transition-all">
         <div className="space-y-6">
-          <div className="flex items-center gap-4">
-            <div className="text-5xl">{icon}</div>
-            <div className="flex-1">
-              <h2 className="text-2xl font-semibold mb-2">{title}</h2>
-              <p className="text-muted-foreground">{description}</p>
+          <div className="flex flex-col sm:flex-row items-center text-center sm:text-left gap-4">
+            <div className="text-4xl sm:text-5xl">{icon}</div>
+            <div className="flex-1 space-y-2 max-w-full">
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-semibold break-words">{title}</h2>
+              <p className="text-sm sm:text-base text-muted-foreground break-words px-2 sm:px-0">{description}</p>
             </div>
           </div>
           
@@ -32,15 +32,15 @@ export function FeatureCard({ title, description, icon, onClick, variant = "defa
             <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
           </Button>
 
-          <div className="flex gap-4 text-sm text-muted-foreground">
+          <div className="flex flex-wrap justify-center sm:justify-start gap-3 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               ⏱️ <span>2 minutes</span>
             </div>
             <div className="flex items-center gap-2">
-              📄 <span>Documents structurés</span>
+              📄 <span className="hidden xs:inline">Documents structurés</span><span className="xs:hidden">Structurés</span>
             </div>
             <div className="flex items-center gap-2">
-              🤖 <span>Alimenté par IA</span>
+              🤖 <span className="hidden xs:inline">Alimenté par IA</span><span className="xs:hidden">IA</span>
             </div>
           </div>
         </div>
