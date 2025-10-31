@@ -51,22 +51,13 @@ export default function Onboarding() {
       
       if (error) throw error;
       
-      // Marquer l'onboarding comme complété dans le sessionStorage
-      sessionStorage.setItem('onboarding_just_completed', 'true');
-      
       toast({
         title: "✅ Bienvenue !",
         description: "Votre profil a été configuré avec succès",
       });
       
-      // Petit délai pour s'assurer que la DB est à jour, puis naviguer
-      setTimeout(() => {
-        navigate("/dashboard");
-        // Forcer un reload de la page après navigation pour refresh les données
-        setTimeout(() => {
-          window.location.reload();
-        }, 100);
-      }, 500);
+      // IMPORTANT : Forcer le rechargement complet de l'application
+      window.location.href = "/dashboard";
     } catch (error) {
       console.error("Erreur onboarding:", error);
       toast({

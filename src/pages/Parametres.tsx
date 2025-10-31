@@ -165,31 +165,31 @@ export default function Parametres() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Logo cabinet */}
-                <div className="space-y-2">
-                  <Label>Logo du cabinet</Label>
-                  <div className="flex items-center gap-4">
-                    {formData.logo_url && (
-                      <img 
-                        src={formData.logo_url} 
-                        alt="Logo" 
-                        className="h-16 w-16 rounded object-contain border"
-                      />
-                    )}
-                    <div className="flex-1">
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleLogoUpload}
-                        disabled={uploading}
-                        className="cursor-pointer"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        PNG, JPG ou SVG. Max 2MB.
-                      </p>
+                  <div className="space-y-2">
+                    <Label>Logo du cabinet</Label>
+                    <div className="flex items-center gap-4">
+                      {formData.logo_url && (
+                        <img 
+                          src={formData.logo_url} 
+                          alt="Logo" 
+                          className="h-16 w-16 rounded object-contain border"
+                        />
+                      )}
+                      <div className="flex-1">
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleLogoUpload}
+                          disabled={uploading}
+                          className="cursor-pointer"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          PNG, JPG ou SVG. Max 2MB.
+                        </p>
+                      </div>
+                      {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
                     </div>
-                    {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
                   </div>
-                </div>
 
                 {/* Prénom en PREMIER avec bon autocomplete */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

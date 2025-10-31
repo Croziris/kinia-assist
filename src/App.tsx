@@ -35,15 +35,6 @@ function AppLayout() {
       return;
     }
 
-    // Si l'onboarding vient d'être complété, ne pas re-vérifier
-    const justCompleted = sessionStorage.getItem('onboarding_just_completed');
-    if (justCompleted === 'true') {
-      sessionStorage.removeItem('onboarding_just_completed');
-      setNeedsOnboarding(false);
-      setCheckingAuth(false);
-      return;
-    }
-
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -56,6 +47,8 @@ function AppLayout() {
         .select("onboarding_completed, nom, prenom")
         .eq("id", user.id)
         .single();
+
+      console.log("Onboarding check:", data);
 
       // Si pas de nom/prénom ou onboarding non complété
       // @ts-ignore - onboarding_completed column will be available after types refresh
