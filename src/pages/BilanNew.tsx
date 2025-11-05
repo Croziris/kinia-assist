@@ -35,21 +35,19 @@ export default function BilanNew() {
     setIsGenerating(true);
     setError(null);
     setPiiDetails([]);
-    
+
     try {
-      // 1. Récupérer l'utilisateur connecté
+      // 1. Auth check
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error("Non authentifié");
-      }
-      
-      // 2. Vérifier les quotas (si plan free)
+      if (!user) throw new Error("Non authentifié");
+
+      // 2. Quota check
       const { data: profile } = await supabase
         .from("profiles")
         .select("plan, credits_free")
         .eq("id", user.id)
         .single();
-      
+
       if (profile?.plan === "free" && profile.credits_free <= 0) {
         toast({
           title: "Quota épuisé",
@@ -59,9 +57,10 @@ export default function BilanNew() {
         navigate("/dashboard");
         return;
       }
-      
+
       // 3. Appeler le webhook n8n
-      console.log("Appel webhook n8n...");
+      console.log("📤 Appel webhook n8n avec notes:", notes);
+      
       const response = await fetch(WEBHOOK_URL, {
         method: "POST",
         headers: {
@@ -72,17 +71,16 @@ export default function BilanNew() {
           kine_id: user.id,
         }),
       });
-      
-      console.log("Statut response:", response.status);
-      
-      // IMPORTANT : Parser la réponse DANS TOUS LES CAS
+
+      console.log("📥 Statut response:", response.status);
+
+      // 4. Parser la réponse
       const result = await response.json();
-      console.log("Résultat:", result);
-      
-      // 4. Gérer TOUTES les réponses (400 ou autre)
+      console.log("📊 Résultat complet:", result);
+
+      // 5. Gérer les erreurs
       if (!result.success) {
         if (result.error === "PII_DETECTED") {
-          // Construire un message détaillé avec les données détectées
           let errorMessage = "⚠️ Données sensibles détectées !\n\n";
           
           if (result.details && result.details.length > 0) {
@@ -92,16 +90,11 @@ export default function BilanNew() {
             });
           }
           
-          if (result.help) {
-            errorMessage += "\n💡 Rappel :\n";
-            errorMessage += "✅ Autorisé : Âge (45 ans), profession générale, initiales\n";
-            errorMessage += "❌ Interdit : Nom complet, date de naissance, téléphone";
-          }
+          errorMessage += "\n💡 Rappel : L'âge (ex: '45 ans') est accepté, mais pas la date de naissance complète.";
           
           setError(errorMessage);
           setPiiDetails(result.details || []);
           
-          // Toast pour plus de visibilité
           toast({
             title: "❌ Données personnelles détectées",
             description: "Veuillez modifier vos notes et retirer les informations sensibles",
@@ -115,53 +108,74 @@ export default function BilanNew() {
           throw new Error(result.message || "Erreur lors de la génération");
         }
       }
-      
-      // 5. Si succès, continuer normalement
-      if (!result.markdown) {
-        throw new Error("Aucun contenu généré");
+
+      // 6. CRITIQUE : Vérifier que result.data existe
+      if (!result.data) {
+        console.error("❌ Pas de données dans result:", result);
+        throw new Error("Le webhook n'a pas retourné de données structurées");
       }
+
+      console.log("✅ Données structurées reçues:", result.data);
+
+      // 7. Sauvegarder dans Supabase
+      console.log("💾 Sauvegarde dans Supabase...");
       
-      // 6. Créer le bilan dans Supabase
       const { data: bilan, error: insertError } = await supabase
         .from("bilans")
         .insert({
           kine_id: user.id,
-          contenu_markdown: result.markdown,
-          statut: "brouillon",
+          contenu_json: result.data,
+          contenu_markdown: result.markdown || "",
+          statut: "draft",
         })
         .select()
         .single();
-      
-      if (insertError) throw insertError;
-      
-      // 7. Décrémenter le quota si free
+
+      if (insertError) {
+        console.error("❌ Erreur insertion Supabase:", insertError);
+        throw insertError;
+      }
+
+      console.log("✅ Bilan créé avec ID:", bilan.id);
+      console.log("✅ contenu_json sauvegardé:", bilan.contenu_json);
+
+      // 8. Décrémenter les crédits (Free uniquement)
       if (profile?.plan === "free") {
-        await supabase
+        const { error: updateError } = await supabase
           .from("profiles")
           .update({ credits_free: profile.credits_free - 1 })
           .eq("id", user.id);
+
+        if (updateError) {
+          console.error("⚠️ Erreur décrémentation crédits:", updateError);
+        }
       }
-      
-      // 8. Logger l'utilisation
+
+      // 9. Logger l'utilisation
       await supabase.from("usage_logs").insert({
         kine_id: user.id,
         action_type: "bilan_generate",
         details: { bilan_id: bilan.id },
       });
-      
-      // 9. Succès : redirection
+
+      // 10. Toast de succès
       toast({
-        title: "✅ Bilan généré !",
-        description: "Vous pouvez maintenant le valider et le modifier.",
+        title: "✅ Bilan généré",
+        description: "Votre bilan a été créé avec succès",
       });
-      
+
+      // 11. Rediriger vers validation
+      console.log("➡️ Redirection vers /bilan/validate/" + bilan.id);
       navigate(`/bilan/validate/${bilan.id}`);
+
+    } catch (error) {
+      console.error("❌ Erreur génération:", error);
       
-    } catch (err) {
-      console.error("Erreur génération:", err);
+      setError(error instanceof Error ? error.message : "Une erreur est survenue");
+      
       toast({
-        title: "❌ Erreur",
-        description: err instanceof Error ? err.message : "Une erreur est survenue",
+        title: "Erreur",
+        description: error instanceof Error ? error.message : "Impossible de générer le bilan",
         variant: "destructive",
       });
     } finally {
