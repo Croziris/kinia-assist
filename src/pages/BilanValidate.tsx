@@ -145,7 +145,36 @@ export default function BilanValidate() {
       if (!user) throw new Error("Non authentifié");
       
       console.log("📄 Génération PDF pour bilan:", id);
-      console.log("📊 Données envoyées:", bilanData);
+      
+      // Récupérer les informations du kiné depuis Supabase
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("nom, prenom, rpps, adresse, telephone")
+        .eq("id", user.id)
+        .single();
+      
+      if (profileError) {
+        console.error("Erreur récupération profil:", profileError);
+        throw new Error("Impossible de récupérer vos informations");
+      }
+      
+      console.log("👤 Infos kiné récupérées:", profile);
+      
+      // Préparer les données à envoyer
+      const payload = {
+        bilan_id: id,
+        kine_id: user.id,
+        data: bilanData,
+        kine_info: {
+          nom: profile?.nom || "",
+          prenom: profile?.prenom || "",
+          rpps: profile?.rpps || "",
+          adresse: profile?.adresse || "",
+          telephone: profile?.telephone || ""
+        }
+      };
+      
+      console.log("📊 Données envoyées au webhook:", payload);
       
       // Appel au webhook n8n
       const response = await fetch("https://n8n.crozier-pierre.fr/webhook/bilan/pdf/generate", {
@@ -153,11 +182,7 @@ export default function BilanValidate() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          bilan_id: id,
-          kine_id: user.id,
-          data: bilanData
-        }),
+        body: JSON.stringify(payload),
       });
       
       if (!response.ok) {
