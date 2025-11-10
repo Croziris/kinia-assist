@@ -69,6 +69,7 @@ export default function BilanValidate() {
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [bilanData, setBilanData] = useState<BilanData | null>(null);
   
   useEffect(() => {
@@ -133,6 +134,65 @@ export default function BilanValidate() {
       });
     } finally {
       setSaving(false);
+    }
+  };
+  
+  const handleGeneratePDF = async () => {
+    setGenerating(true);
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Non authentifié");
+      
+      console.log("📄 Génération PDF pour bilan:", id);
+      console.log("📊 Données envoyées:", bilanData);
+      
+      // Appel au webhook n8n
+      const response = await fetch("https://n8n.crozier-pierre.fr/webhook/bilan/pdf/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          bilan_id: id,
+          kine_id: user.id,
+          data: bilanData
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log("✅ PDF généré:", result);
+      
+      // Si le PDF a été uploadé sur Scaleway, le télécharger
+      if (result.pdf_url) {
+        // Ouvrir le PDF dans un nouvel onglet
+        window.open(result.pdf_url, '_blank');
+        
+        toast({
+          title: "✅ PDF généré avec succès",
+          description: `Le PDF est disponible pendant 30 jours. Il a été ouvert dans un nouvel onglet.`,
+        });
+        
+        // Rediriger vers l'historique après 2 secondes
+        setTimeout(() => {
+          navigate("/historique");
+        }, 2000);
+      }
+      
+    } catch (error: any) {
+      console.error("❌ Erreur génération PDF:", error);
+      
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de générer le PDF",
+        variant: "destructive",
+      });
+    } finally {
+      setGenerating(false);
     }
   };
   
@@ -223,10 +283,21 @@ export default function BilanValidate() {
             <Button 
               variant="outline" 
               size="lg"
+              onClick={handleGeneratePDF}
+              disabled={generating}
               className="w-full sm:w-auto"
             >
-              <FileDown className="mr-2 h-4 w-4" />
-              Exporter
+              {generating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Génération PDF...
+                </>
+              ) : (
+                <>
+                  <FileDown className="mr-2 h-4 w-4" />
+                  Générer PDF
+                </>
+              )}
             </Button>
             
             <Button 
