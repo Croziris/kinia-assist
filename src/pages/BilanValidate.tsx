@@ -149,7 +149,7 @@ export default function BilanValidate() {
       // Récupérer les informations du kiné depuis Supabase
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("nom, prenom, rpps, adresse, telephone")
+        .select("nom, prenom, rpps, adresse, telephone, logo_url")
         .eq("id", user.id)
         .single();
       
@@ -170,7 +170,8 @@ export default function BilanValidate() {
           prenom: profile?.prenom || "",
           rpps: profile?.rpps || "",
           adresse: profile?.adresse || "",
-          telephone: profile?.telephone || ""
+          telephone: profile?.telephone || "",
+          logo_url: profile?.logo_url || ""
         }
       };
       
