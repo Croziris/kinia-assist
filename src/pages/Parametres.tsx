@@ -10,7 +10,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Sparkles, Calendar, TrendingUp } from "lucide-react";
+import { Loader2, Sparkles, Calendar, TrendingUp, FileText, Award } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Parametres() {
   const { user, profile, refreshProfile } = useAuth();
@@ -27,6 +28,14 @@ export default function Parametres() {
     telephone: "",
     logo_url: "",
   });
+  
+  const [stats, setStats] = useState({
+    totalBilans: 0,
+    bilansThisMonth: 0,
+    totalPDFs: 0,
+    pdfsThisMonth: 0,
+    loading: true
+  });
 
   // Synchroniser formData avec le profil quand il se charge
   useEffect(() => {
@@ -42,6 +51,58 @@ export default function Parametres() {
       });
     }
   }, [profile]);
+  
+  // Charger les statistiques
+  useEffect(() => {
+    if (user?.id) {
+      loadStats();
+    }
+  }, [user]);
+  
+  const loadStats = async () => {
+    try {
+      if (!user?.id) return;
+      
+      // Total bilans
+      const { data: allBilans, error: bilansError } = await supabase
+        .from("bilans")
+        .select("id, created_at, statut")
+        .eq("kine_id", user.id);
+      
+      if (bilansError) throw bilansError;
+      
+      const totalBilans = allBilans?.length || 0;
+      
+      // Bilans ce mois
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+      
+      const bilansThisMonth = allBilans?.filter(b => 
+        new Date(b.created_at) >= startOfMonth
+      ).length || 0;
+      
+      // Total PDFs générés
+      const totalPDFs = allBilans?.filter(b => b.statut === 'exported').length || 0;
+      
+      // PDFs ce mois
+      const pdfsThisMonth = allBilans?.filter(b => 
+        b.statut === 'exported' && new Date(b.created_at) >= startOfMonth
+      ).length || 0;
+      
+      setStats({
+        totalBilans,
+        bilansThisMonth,
+        totalPDFs,
+        pdfsThisMonth,
+        loading: false
+      });
+      
+    } catch (error) {
+      console.error("Erreur chargement stats:", error);
+      setStats(prev => ({ ...prev, loading: false }));
+    }
+  };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -183,8 +244,9 @@ export default function Parametres() {
         <h1 className="text-3xl font-bold mb-6">⚙️ Paramètres du compte</h1>
 
         <Tabs defaultValue="profil" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 max-w-md">
+          <TabsList className="grid w-full grid-cols-4 max-w-2xl">
             <TabsTrigger value="profil">Profil</TabsTrigger>
+            <TabsTrigger value="statistiques">Statistiques</TabsTrigger>
             <TabsTrigger value="abonnement">Abonnement</TabsTrigger>
             <TabsTrigger value="securite">Sécurité</TabsTrigger>
           </TabsList>
@@ -391,6 +453,134 @@ export default function Parametres() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* ONGLET STATISTIQUES */}
+          <TabsContent value="statistiques">
+            <div className="space-y-6">
+              {/* Card Plan & Crédits */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Award className="h-5 w-5" />
+                    Plan & Crédits
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Plan actuel</p>
+                      <p className="text-2xl font-bold">
+                        {isPremium ? (
+                          <span className="text-[#C5A572]">Premium ✨</span>
+                        ) : (
+                          <span>Gratuit</span>
+                        )}
+                      </p>
+                    </div>
+                    {!isPremium && (
+                      <Badge variant="secondary" className="text-lg px-4 py-2">
+                        {profile?.credits_free || 0} crédits restants
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  {isPremium && profile?.plan_expires_at && (
+                    <div className="text-sm text-muted-foreground">
+                      Expire le {new Date(profile.plan_expires_at).toLocaleDateString('fr-FR', {
+                        day: '2-digit',
+                        month: 'long',
+                        year: 'numeric'
+                      })}
+                    </div>
+                  )}
+                  
+                  {!isPremium && (
+                    <Button 
+                      className="w-full bg-[#C5A572] hover:bg-[#b59562]"
+                      size="lg"
+                    >
+                      <Sparkles className="mr-2 h-5 w-5" />
+                      Passer en Premium
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Card Statistiques */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5" />
+                    Statistiques d'utilisation
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {stats.loading ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Skeleton className="h-24" />
+                      <Skeleton className="h-24" />
+                      <Skeleton className="h-24" />
+                      <Skeleton className="h-24" />
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Total bilans */}
+                      <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="p-2 bg-blue-100 rounded-lg">
+                            <FileText className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-blue-600 font-medium">Total bilans</p>
+                            <p className="text-2xl font-bold text-blue-900">{stats.totalBilans}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Bilans ce mois */}
+                      <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="p-2 bg-green-100 rounded-lg">
+                            <Calendar className="h-5 w-5 text-green-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-green-600 font-medium">Ce mois</p>
+                            <p className="text-2xl font-bold text-green-900">{stats.bilansThisMonth}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Total PDFs */}
+                      <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="p-2 bg-purple-100 rounded-lg">
+                            <FileText className="h-5 w-5 text-purple-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-purple-600 font-medium">PDF générés</p>
+                            <p className="text-2xl font-bold text-purple-900">{stats.totalPDFs}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* PDFs ce mois */}
+                      <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="p-2 bg-orange-100 rounded-lg">
+                            <TrendingUp className="h-5 w-5 text-orange-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-orange-600 font-medium">PDF ce mois</p>
+                            <p className="text-2xl font-bold text-orange-900">{stats.pdfsThisMonth}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           {/* ONGLET ABONNEMENT */}
