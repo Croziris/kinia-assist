@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { Loader2, Save, FileDown, ArrowLeft } from "lucide-react";
@@ -253,10 +254,164 @@ export default function BilanValidate() {
     });
   };
   
+  const FormSkeleton = () => (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+        <div className="flex-1">
+          <Skeleton className="h-8 w-32 mb-4" />
+          <Skeleton className="h-10 w-48" />
+          <Skeleton className="h-5 w-64 mt-2" />
+        </div>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Skeleton className="h-12 w-40" />
+          <Skeleton className="h-12 w-40" />
+        </div>
+      </div>
+      
+      {/* Grid 3 colonnes */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {/* Colonne 1 */}
+        <div className="lg:col-span-1 xl:col-span-1 space-y-6">
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-48" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Skeleton className="h-4 w-20 mb-2" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+              <div>
+                <Skeleton className="h-4 w-20 mb-2" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+              <div>
+                <Skeleton className="h-4 w-32 mb-2" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+              <div>
+                <Skeleton className="h-4 w-24 mb-2" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-40" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Skeleton className="h-4 w-32 mb-2" />
+                <Skeleton className="h-24 w-full" />
+              </div>
+              <div>
+                <Skeleton className="h-4 w-40 mb-2" />
+                <Skeleton className="h-24 w-full" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        
+        {/* Colonne 2 */}
+        <div className="lg:col-span-2 xl:col-span-2 space-y-6">
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-48" />
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div>
+                <Skeleton className="h-5 w-32 mb-4" />
+                <div className="space-y-4">
+                  <div>
+                    <Skeleton className="h-4 w-36 mb-2" />
+                    <Skeleton className="h-20 w-full" />
+                  </div>
+                  <div>
+                    <Skeleton className="h-4 w-48 mb-2" />
+                    <Skeleton className="h-32 w-full" />
+                  </div>
+                </div>
+              </div>
+              <div>
+                <Skeleton className="h-5 w-32 mb-4" />
+                <div>
+                  <Skeleton className="h-4 w-56 mb-2" />
+                  <Skeleton className="h-20 w-full" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-48" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Skeleton className="h-4 w-40 mb-2" />
+                <Skeleton className="h-24 w-full" />
+              </div>
+              <div>
+                <Skeleton className="h-4 w-40 mb-2" />
+                <Skeleton className="h-24 w-full" />
+              </div>
+              <div>
+                <Skeleton className="h-4 w-40 mb-2" />
+                <Skeleton className="h-24 w-full" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        
+        {/* Colonne 3 */}
+        <div className="lg:col-span-3 xl:col-span-1 space-y-6">
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-40" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Skeleton className="h-4 w-48 mb-2" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-48" />
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-32" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-40 w-full" />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+  
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F5F5DC]">
-        <Loader2 className="h-8 w-8 animate-spin text-[#8B9D83]" />
+      <div className="min-h-screen bg-[#F5F5DC] pb-20 md:pb-0">
+        <Header />
+        <main className="container mx-auto px-4 py-8 max-w-7xl">
+          <FormSkeleton />
+        </main>
+        <BottomNav />
       </div>
     );
   }
