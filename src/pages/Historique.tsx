@@ -4,7 +4,7 @@ import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Edit, FileDown, Trash2, AlertCircle, Loader2 } from "lucide-react";
+import { Edit, FileDown, Trash2, AlertCircle, Loader2, FileText, PlusCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -123,16 +123,31 @@ export default function Historique() {
         </div>
 
         {bilans.length === 0 ? (
-          <div className="text-center space-y-4 py-12">
-            <div className="text-6xl">📚</div>
-            <h2 className="text-2xl font-semibold">Aucun bilan</h2>
-            <p className="text-muted-foreground">
-              Vos bilans précédents apparaîtront ici.
-            </p>
-            <Button onClick={() => navigate("/bilan/new")} className="mt-4">
-              Créer un bilan
-            </Button>
-          </div>
+          <Card className="text-center py-12">
+            <CardContent>
+              <div className="flex flex-col items-center gap-4">
+                <div className="rounded-full bg-gray-100 p-6">
+                  <FileText className="h-12 w-12 text-gray-400" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold mb-2">
+                    Aucun bilan pour le moment
+                  </h3>
+                  <p className="text-gray-600 mb-6">
+                    Créez votre premier bilan en quelques minutes grâce à l'IA
+                  </p>
+                </div>
+                <Button
+                  size="lg"
+                  onClick={() => navigate("/bilan/new")}
+                  className="bg-[#8B9D83] hover:bg-[#7a8c73]"
+                >
+                  <PlusCircle className="mr-2 h-5 w-5" />
+                  Créer mon premier bilan
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {bilans.map((bilan) => {
