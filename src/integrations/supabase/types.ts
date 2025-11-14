@@ -23,6 +23,9 @@ export type Database = {
           id: string
           kine_id: string
           patient_id: string | null
+          pdf_downloaded: boolean | null
+          pdf_expire_at: string | null
+          pdf_url: string | null
           statut: string
           template_id: string | null
           updated_at: string
@@ -35,6 +38,9 @@ export type Database = {
           id?: string
           kine_id: string
           patient_id?: string | null
+          pdf_downloaded?: boolean | null
+          pdf_expire_at?: string | null
+          pdf_url?: string | null
           statut?: string
           template_id?: string | null
           updated_at?: string
@@ -47,6 +53,9 @@ export type Database = {
           id?: string
           kine_id?: string
           patient_id?: string | null
+          pdf_downloaded?: boolean | null
+          pdf_expire_at?: string | null
+          pdf_url?: string | null
           statut?: string
           template_id?: string | null
           updated_at?: string
@@ -279,6 +288,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_expired_pdfs: { Args: never; Returns: undefined }
       get_user_email: { Args: { user_id: string }; Returns: string }
     }
     Enums: {

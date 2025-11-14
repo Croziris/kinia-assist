@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, Loader2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { VoiceRecorder } from "@/components/VoiceRecorder";
 
 const WEBHOOK_URL = "https://n8n.crozier-pierre.fr/webhook/bilan/intake/v2";
 
@@ -205,12 +206,46 @@ export default function BilanNew() {
           </CardHeader>
           
           <CardContent className="space-y-6">
+            {/* Option 1 : Dictée vocale */}
             <div>
-              <h3 className="text-lg font-semibold mb-2">
-                Étape 1 : Saisir vos notes de consultation
+              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                🎤 Option 1 : Dictée vocale
               </h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Décrivez librement votre consultation. L'IA structurera automatiquement vos notes.
+                Enregistrez vos observations vocalement, l'IA transcrira automatiquement votre audio en texte.
+              </p>
+              
+              <VoiceRecorder 
+                onTranscriptComplete={(text) => {
+                  setNotes(text);
+                  // Scroll to textarea
+                  setTimeout(() => {
+                    const textarea = document.querySelector('textarea');
+                    textarea?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }, 100);
+                }}
+              />
+            </div>
+
+            {/* Séparateur "Ou" */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground font-semibold">
+                  Ou
+                </span>
+              </div>
+            </div>
+
+            {/* Option 2 : Saisie manuelle */}
+            <div>
+              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                ✍️ Option 2 : Saisie manuelle
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Saisissez vos notes de consultation. L'IA structurera automatiquement vos notes.
               </p>
               
               <Textarea
