@@ -18,6 +18,19 @@ const WEBHOOK_URL = import.meta.env.VITE_N8N_TRANSCRIBE_WEBHOOK_URL || "https://
 const MAX_DURATION_MS = 4 * 60 * 1000; // 4 minutes
 const WARNING_DURATION_MS = 3 * 60 * 1000; // 3 minutes
 
+// Get supported audio format
+const getSupportedMimeType = (): { mimeType: string; format: string } => {
+  const types = [
+    { mimeType: 'audio/wav', format: 'wav' },
+    { mimeType: 'audio/mp4', format: 'mp4' },
+    { mimeType: 'audio/mpeg', format: 'mpeg' },
+    { mimeType: 'audio/webm;codecs=opus', format: 'webm' }
+  ];
+  
+  const supported = types.find(type => MediaRecorder.isTypeSupported(type.mimeType));
+  return supported || { mimeType: 'audio/webm', format: 'webm' };
+};
+
 export const VoiceRecorder = ({ onTranscriptComplete }: VoiceRecorderProps) => {
   const [state, setState] = useState<RecordingState>('idle');
   const [transcript, setTranscript] = useState('');
@@ -67,8 +80,11 @@ export const VoiceRecorder = ({ onTranscriptComplete }: VoiceRecorderProps) => {
       streamRef.current = stream;
       chunksRef.current = [];
 
+      const supportedFormat = getSupportedMimeType();
+      console.log('📼 Format audio supporté:', supportedFormat);
+
       const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus'
+        mimeType: supportedFormat.mimeType
       });
 
       mediaRecorder.ondataavailable = (event) => {
@@ -78,7 +94,8 @@ export const VoiceRecorder = ({ onTranscriptComplete }: VoiceRecorderProps) => {
       };
 
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        const supportedFormat = getSupportedMimeType();
+        const audioBlob = new Blob(chunksRef.current, { type: supportedFormat.mimeType });
         await processAudio(audioBlob);
       };
 
@@ -172,7 +189,8 @@ export const VoiceRecorder = ({ onTranscriptComplete }: VoiceRecorderProps) => {
       reader.readAsDataURL(audioBlob);
       const audioBase64 = await base64Promise;
 
-      console.log('📤 Envoi audio pour transcription...');
+      const supportedFormat = getSupportedMimeType();
+      console.log('📤 Envoi audio pour transcription...', { format: supportedFormat.format });
 
       // Send to n8n webhook
       const response = await fetch(WEBHOOK_URL, {
@@ -183,7 +201,7 @@ export const VoiceRecorder = ({ onTranscriptComplete }: VoiceRecorderProps) => {
         body: JSON.stringify({
           audioBase64,
           userId: user.id,
-          format: 'webm'
+          format: supportedFormat.format
         }),
       });
 
