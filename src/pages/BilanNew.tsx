@@ -12,9 +12,7 @@ import { VoiceRecorder } from "@/components/VoiceRecorder";
 const WEBHOOK_URL = "https://n8n.crozier-pierre.fr/webhook/bilan/intake/v2";
 export default function BilanNew() {
   const navigate = useNavigate();
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const [notes, setNotes] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +23,7 @@ export default function BilanNew() {
       toast({
         title: "Attention",
         description: "Veuillez saisir vos notes avant de générer le bilan.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -35,21 +33,17 @@ export default function BilanNew() {
     try {
       // 1. Auth check
       const {
-        data: {
-          user
-        }
+        data: { user },
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Non authentifié");
 
       // 2. Quota check
-      const {
-        data: profile
-      } = await supabase.from("profiles").select("plan, credits_free").eq("id", user.id).single();
+      const { data: profile } = await supabase.from("profiles").select("plan, credits_free").eq("id", user.id).single();
       if (profile?.plan === "free" && profile.credits_free <= 0) {
         toast({
           title: "Quota épuisé",
           description: "Vous avez utilisé vos 2 bilans gratuits. Passez Premium pour continuer.",
-          variant: "destructive"
+          variant: "destructive",
         });
         navigate("/dashboard");
         return;
@@ -60,12 +54,12 @@ export default function BilanNew() {
       const response = await fetch(WEBHOOK_URL, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           message: notes,
-          kine_id: user.id
-        })
+          kine_id: user.id,
+        }),
       });
       console.log("📥 Statut response:", response.status);
 
@@ -90,7 +84,7 @@ export default function BilanNew() {
             title: "❌ Données personnelles détectées",
             description: "Veuillez modifier vos notes et retirer les informations sensibles",
             variant: "destructive",
-            duration: 10000
+            duration: 10000,
           });
           setIsGenerating(false);
           return;
@@ -108,15 +102,16 @@ export default function BilanNew() {
 
       // 7. Sauvegarder dans Supabase
       console.log("💾 Sauvegarde dans Supabase...");
-      const {
-        data: bilan,
-        error: insertError
-      } = await supabase.from("bilans").insert({
-        kine_id: user.id,
-        contenu_json: result.data,
-        contenu_markdown: result.markdown || "",
-        statut: "draft"
-      }).select().single();
+      const { data: bilan, error: insertError } = await supabase
+        .from("bilans")
+        .insert({
+          kine_id: user.id,
+          contenu_json: result.data,
+          contenu_markdown: result.markdown || "",
+          statut: "draft",
+        })
+        .select()
+        .single();
       if (insertError) {
         console.error("❌ Erreur insertion Supabase:", insertError);
         throw insertError;
@@ -126,11 +121,12 @@ export default function BilanNew() {
 
       // 8. Décrémenter les crédits (Free uniquement)
       if (profile?.plan === "free") {
-        const {
-          error: updateError
-        } = await supabase.from("profiles").update({
-          credits_free: profile.credits_free - 1
-        }).eq("id", user.id);
+        const { error: updateError } = await supabase
+          .from("profiles")
+          .update({
+            credits_free: profile.credits_free - 1,
+          })
+          .eq("id", user.id);
         if (updateError) {
           console.error("⚠️ Erreur décrémentation crédits:", updateError);
         }
@@ -141,14 +137,14 @@ export default function BilanNew() {
         kine_id: user.id,
         action_type: "bilan_generate",
         details: {
-          bilan_id: bilan.id
-        }
+          bilan_id: bilan.id,
+        },
       });
 
       // 10. Toast de succès
       toast({
         title: "✅ Bilan généré",
-        description: "Votre bilan a été créé avec succès"
+        description: "Votre bilan a été créé avec succès",
       });
 
       // 11. Rediriger vers validation
@@ -160,13 +156,14 @@ export default function BilanNew() {
       toast({
         title: "Erreur",
         description: error instanceof Error ? error.message : "Impossible de générer le bilan",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setIsGenerating(false);
     }
   };
-  return <div className="min-h-screen bg-background">
+  return (
+    <div className="min-h-screen bg-background">
       <Header />
 
       <main className="container mx-auto px-4 py-8 max-w-4xl">
@@ -177,32 +174,32 @@ export default function BilanNew() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl flex items-center gap-2">
-              📋 Nouveau Bilan Kinésithérapeutique
-            </CardTitle>
+            <CardTitle className="text-2xl flex items-center gap-2">📋 Nouveau Bilan Kinésithérapeutique</CardTitle>
           </CardHeader>
-          
+
           <CardContent className="space-y-6">
             {/* Option 1 : Dictée vocale */}
             <div>
-              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                🎤 Option 1 : Dictée vocale
-              </h3>
+              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">🎤 Option 1 : Dictée vocale</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Enregistrez vos observations vocalement, l'IA transcrira automatiquement votre audio en texte. Ce processus dure plusieurs secondes afin de traiter vos données de façon sécurisé et en respectant les règles RGPD.                                                   
+                Enregistrez vos observations vocalement, l'IA transcrira automatiquement votre audio en texte. Ce
+                processus dure plusieurs secondes afin de traiter vos données de façon sécurisé et en respectant les
+                règles RGPD.                                                   
               </p>
-              
-              <VoiceRecorder onTranscriptComplete={text => {
-              setNotes(text);
-              // Scroll to textarea
-              setTimeout(() => {
-                const textarea = document.querySelector('textarea');
-                textarea?.scrollIntoView({
-                  behavior: 'smooth',
-                  block: 'center'
-                });
-              }, 100);
-            }} />
+
+              <VoiceRecorder
+                onTranscriptComplete={(text) => {
+                  setNotes(text);
+                  // Scroll to textarea
+                  setTimeout(() => {
+                    const textarea = document.querySelector("textarea");
+                    textarea?.scrollIntoView({
+                      behavior: "smooth",
+                      block: "center",
+                    });
+                  }, 100);
+                }}
+              />
             </div>
 
             {/* Séparateur "Ou" */}
@@ -211,52 +208,52 @@ export default function BilanNew() {
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground font-semibold">
-                  Ou
-                </span>
+                <span className="bg-background px-2 text-muted-foreground font-semibold">Ou</span>
               </div>
             </div>
 
             {/* Option 2 : Saisie manuelle */}
             <div>
-              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                ✍️ Option 2 : Saisie manuelle
-              </h3>
+              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">✍️ Option 2 : Saisie manuelle</h3>
               <p className="text-sm text-muted-foreground mb-4">
                 Saisissez vos notes de consultation. L'IA structurera automatiquement vos notes.
               </p>
-              
-              <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder={`Exemple :\n\n• Contexte : Patient vient pour douleurs épaule droite depuis 3 semaines\n• Examen : Limitation abduction 90°, douleur arc douloureux positif\n• Tests : Jobe positif, Hawkins positif\n• Hypothèse : Tendinopathie supra-épineux\n• Objectifs : Diminuer douleur, récupérer amplitudes\n• Traitement : Massage transverse profond, renforcement excentrique`} className="min-h-[400px] font-mono text-sm" maxLength={MAX_CHARS} />
-              
+
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder={`Exemple :\n\n• Contexte : Patient vient pour douleurs épaule droite depuis 3 semaines\n• Examen : Limitation abduction 90°, douleur arc douloureux positif, Jobe positif, Hawkins positif \n• Habitudes de vie : sommeil, alimentation, activité physique ... \n• Hypothèse diagnotic : Tendinopathie supra-épineux\n• Objectifs : Diminuer douleur, récupérer amplitudes, améliorer le contrôle moteur\n• Traitement : Optimiser la récupération, renforcement excentrique`}
+                className="min-h-[400px] font-mono text-sm"
+                maxLength={MAX_CHARS}
+              />
+
               <div className="flex justify-between items-center mt-2">
                 <span className="text-xs text-muted-foreground">
                   {notes.length} / {MAX_CHARS} caractères
                 </span>
-                
-                {notes.length > MAX_CHARS * 0.9 && <span className="text-xs text-orange-500 font-medium">
-                    ⚠️ Approche de la limite
-                  </span>}
+
+                {notes.length > MAX_CHARS * 0.9 && (
+                  <span className="text-xs text-orange-500 font-medium">⚠️ Approche de la limite</span>
+                )}
               </div>
             </div>
-            
+
             {/* Avertissement RGPD */}
             <Alert className="border-orange-300 bg-orange-50">
               <AlertTriangle className="h-4 w-4 text-orange-600" />
               <AlertDescription className="text-orange-800">
-                <strong>Important :</strong> N'incluez AUCUNE donnée identifiante 
-                (nom, prénom, date de naissance, adresse). Vous ajouterez les informations 
-                patient à l'étape suivante de manière sécurisée.
+                <strong>Important :</strong> N'incluez AUCUNE donnée identifiante (nom, prénom, date de naissance,
+                adresse). Vous ajouterez les informations patient à l'étape suivante de manière sécurisée.
               </AlertDescription>
             </Alert>
-            
+
             {/* Affichage erreur RGPD amélioré */}
-            {error && <Alert variant="destructive" className="border-red-500 bg-red-50">
+            {error && (
+              <Alert variant="destructive" className="border-red-500 bg-red-50">
                 <AlertTriangle className="h-5 w-5" />
                 <div className="space-y-3">
-                  <AlertDescription className="whitespace-pre-line font-medium text-sm">
-                    {error}
-                  </AlertDescription>
-                  
+                  <AlertDescription className="whitespace-pre-line font-medium text-sm">{error}</AlertDescription>
+
                   {/* Guide de correction visuel */}
                   <div className="p-3 bg-white rounded border border-red-200">
                     <div className="grid grid-cols-2 gap-3 text-xs">
@@ -280,32 +277,46 @@ export default function BilanNew() {
                       </div>
                     </div>
                   </div>
-                  
-                  <Button variant="outline" size="sm" className="w-full" onClick={() => {
-                setError(null);
-                setPiiDetails([]);
-              }}>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => {
+                      setError(null);
+                      setPiiDetails([]);
+                    }}
+                  >
                     Compris, je vais corriger mes notes
                   </Button>
                 </div>
-              </Alert>}
-            
+              </Alert>
+            )}
+
             {/* Bouton génération */}
-            <Button onClick={handleGenerate} disabled={notes.trim().length === 0 || isGenerating} className="w-full bg-primary hover:bg-primary/90" size="lg">
-              {isGenerating ? <>
+            <Button
+              onClick={handleGenerate}
+              disabled={notes.trim().length === 0 || isGenerating}
+              className="w-full bg-primary hover:bg-primary/90"
+              size="lg"
+            >
+              {isGenerating ? (
+                <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                   Analyse en cours... (15-30 secondes)
-                </> : <>
-                  ✨ Générer le bilan structuré
-                </>}
+                </>
+              ) : (
+                <>✨ Générer le bilan structuré</>
+              )}
             </Button>
-            
+
             <p className="text-xs text-center text-muted-foreground">
-              L'IA va analyser vos notes et les organiser en sections professionnelles. 
-              Vous pourrez ensuite valider et modifier le contenu.
+              L'IA va analyser vos notes et les organiser en sections professionnelles. Vous pourrez ensuite valider et
+              modifier le contenu.
             </p>
           </CardContent>
         </Card>
       </main>
-    </div>;
+    </div>
+  );
 }
