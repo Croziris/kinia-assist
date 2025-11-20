@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, Loader2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { VoiceRecorder } from "@/components/VoiceRecorder";
+import { VoiceRecorderRealTime } from "@/components/VoiceRecorderRealTime";
 const WEBHOOK_URL = "https://n8n.crozier-pierre.fr/webhook/bilan/intake/v2";
 export default function BilanNew() {
   const navigate = useNavigate();
@@ -187,7 +187,7 @@ export default function BilanNew() {
                 règles RGPD.                                                   
               </p>
 
-              <VoiceRecorder
+              <VoiceRecorderRealTime
                 onTranscriptComplete={(text) => {
                   setNotes(text);
                   // Scroll to textarea

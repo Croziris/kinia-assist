@@ -1,0 +1,450 @@
+import { useState, useRef, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Textarea } from '@/components/ui/textarea';
+import { Progress } from '@/components/ui/progress';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { Mic, Square, Check, RotateCcw, AlertTriangle, Loader2 } from 'lucide-react';
+import io, { Socket } from 'socket.io-client';
+
+type RecordingState = 'idle' | 'connecting' | 'recording' | 'completed' | 'error';
+
+interface VoiceRecorderRealTimeProps {
+  onTranscriptComplete: (transcript: string) => void;
+}
+
+const PROXY_URL = 'https://speech.crozier-pierre.fr';
+const MAX_DURATION_MS = 4 * 60 * 1000; // 4 minutes
+const WARNING_DURATION_MS = 3 * 60 * 1000; // 3 minutes
+
+export const VoiceRecorderRealTime = ({ onTranscriptComplete }: VoiceRecorderRealTimeProps) => {
+  const [state, setState] = useState<RecordingState>('idle');
+  const [transcript, setTranscript] = useState('');
+  const [partialTranscript, setPartialTranscript] = useState('');
+  const [duration, setDuration] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  
+  const socketRef = useRef<Socket | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const processorRef = useRef<ScriptProcessorNode | null>(null);
+  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const { toast } = useToast();
+  const { user } = useAuth();
+
+  // Setup socket connection
+  useEffect(() => {
+    console.log('🔌 Initializing socket connection to:', PROXY_URL);
+    
+    socketRef.current = io(PROXY_URL, {
+      transports: ['websocket'],
+      reconnection: true,
+    });
+
+    socketRef.current.on('connect', () => {
+      console.log('✅ Socket connected');
+    });
+
+    socketRef.current.on('connected', (data) => {
+      console.log('📡 Received connected event:', data);
+    });
+
+    socketRef.current.on('rt_ready', (data) => {
+      console.log('🎤 Speechmatics ready:', data);
+      setState('recording');
+      toast({
+        title: "🎤 Enregistrement démarré",
+        description: "Parlez clairement et à un rythme naturel",
+      });
+    });
+
+    socketRef.current.on('partial_transcript', (data) => {
+      console.log('📝 Partial transcript:', data);
+      if (data.text) {
+        setPartialTranscript(data.text);
+      }
+    });
+
+    socketRef.current.on('final_transcript', (data) => {
+      console.log('✅ Final transcript:', data);
+      if (data.text) {
+        setTranscript(prev => prev ? `${prev} ${data.text}` : data.text);
+        setPartialTranscript('');
+      }
+    });
+
+    socketRef.current.on('transcription_ended', () => {
+      console.log('🏁 Transcription ended');
+      stopRecording();
+    });
+
+    socketRef.current.on('error', (data) => {
+      console.error('❌ Socket error:', data);
+      setState('error');
+      setError(data.message || 'Une erreur est survenue');
+      toast({
+        title: "Erreur",
+        description: data.message || 'Erreur de transcription',
+        variant: "destructive",
+      });
+    });
+
+    return () => {
+      console.log('🧹 Cleaning up socket connection');
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+      if (processorRef.current) {
+        processorRef.current.disconnect();
+      }
+      if (sourceRef.current) {
+        sourceRef.current.disconnect();
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+    };
+  }, [toast]);
+
+  const formatDuration = (ms: number): string => {
+    const seconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const startRecording = async () => {
+    try {
+      setError(null);
+      setState('connecting');
+      
+      console.log('🎤 Requesting microphone access...');
+      
+      // Request microphone access
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          sampleRate: 16000,
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
+
+      streamRef.current = stream;
+
+      // Create audio context
+      audioContextRef.current = new AudioContext({ sampleRate: 16000 });
+      sourceRef.current = audioContextRef.current.createMediaStreamSource(stream);
+      processorRef.current = audioContextRef.current.createScriptProcessor(4096, 1, 1);
+
+      // Process audio chunks
+      processorRef.current.onaudioprocess = (e) => {
+        const inputData = e.inputBuffer.getChannelData(0);
+        
+        // Convert Float32Array to Int16Array (PCM)
+        const pcmData = new Int16Array(inputData.length);
+        for (let i = 0; i < inputData.length; i++) {
+          const s = Math.max(-1, Math.min(1, inputData[i]));
+          pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        }
+
+        // Encode to Base64
+        const audioBase64 = btoa(String.fromCharCode(...new Uint8Array(pcmData.buffer)));
+
+        // Send via WebSocket
+        if (socketRef.current?.connected) {
+          socketRef.current.emit('audio_chunk', { audio: audioBase64 });
+        }
+      };
+
+      sourceRef.current.connect(processorRef.current);
+      processorRef.current.connect(audioContextRef.current.destination);
+
+      // Start transcription
+      console.log('📤 Emitting start_transcription');
+      socketRef.current?.emit('start_transcription', {
+        language: 'fr',
+        userId: user?.id || 'anonymous'
+      });
+
+      // Start timer
+      setDuration(0);
+      const startTime = Date.now();
+      timerRef.current = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        setDuration(elapsed);
+
+        // Warning at 3 minutes
+        if (elapsed >= WARNING_DURATION_MS && elapsed < WARNING_DURATION_MS + 1000) {
+          toast({
+            title: "⚠️ Attention",
+            description: "Il reste 1 minute d'enregistrement",
+            duration: 3000,
+          });
+        }
+
+        // Auto-stop at 4 minutes
+        if (elapsed >= MAX_DURATION_MS) {
+          toast({
+            title: "Durée maximale atteinte",
+            description: "L'enregistrement s'est arrêté automatiquement",
+          });
+          stopRecording();
+        }
+      }, 100);
+
+    } catch (error) {
+      console.error('❌ Error starting recording:', error);
+      setState('error');
+      setError("Impossible d'accéder au microphone. Veuillez autoriser l'accès dans les paramètres de votre navigateur.");
+      toast({
+        title: "Erreur microphone",
+        description: "Veuillez autoriser l'accès au microphone",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const stopRecording = () => {
+    console.log('⏹️ Stopping recording...');
+    
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+
+    if (processorRef.current) {
+      processorRef.current.disconnect();
+      processorRef.current = null;
+    }
+
+    if (sourceRef.current) {
+      sourceRef.current.disconnect();
+      sourceRef.current = null;
+    }
+
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+
+    // Stop transcription
+    socketRef.current?.emit('stop_transcription');
+
+    setState('completed');
+  };
+
+  const handleTranscriptEdit = (text: string) => {
+    setTranscript(text);
+  };
+
+  const handleValidate = () => {
+    if (transcript.trim()) {
+      onTranscriptComplete(transcript);
+      toast({
+        title: "✅ Texte validé",
+        description: "Le texte a été ajouté au formulaire",
+      });
+    }
+  };
+
+  const handleRetry = () => {
+    setTranscript('');
+    setPartialTranscript('');
+    setDuration(0);
+    setError(null);
+    setState('idle');
+  };
+
+  // Idle state
+  if (state === 'idle') {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col items-center gap-4">
+            <Button
+              size="lg"
+              onClick={startRecording}
+              className="w-full md:w-auto"
+              aria-label="Démarrer l'enregistrement vocal"
+            >
+              <Mic className="mr-2 h-5 w-5" />
+              🎤 Dicter mon bilan (temps réel)
+            </Button>
+            <p className="text-sm text-muted-foreground text-center">
+              Transcription instantanée en temps réel (max 4 minutes)
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Connecting state
+  if (state === 'connecting') {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col items-center gap-4 py-8">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <div className="text-center">
+              <p className="font-semibold text-lg">Connexion à Speechmatics...</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Préparation de la transcription en temps réel
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Recording state
+  if (state === 'recording') {
+    return (
+      <Card className="border-destructive">
+        <CardContent className="pt-6">
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div className="h-12 w-12 rounded-full bg-destructive/20 animate-pulse" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Mic className="h-6 w-6 text-destructive" />
+                </div>
+              </div>
+              <div className="text-left">
+                <p className="font-semibold text-destructive">🔴 Enregistrement en cours...</p>
+                <p className="text-2xl font-mono">{formatDuration(duration)}</p>
+              </div>
+            </div>
+            
+            <Progress 
+              value={(duration / MAX_DURATION_MS) * 100} 
+              className="w-full"
+            />
+
+            {/* Live transcription display */}
+            {(transcript || partialTranscript) && (
+              <div className="w-full border rounded-lg p-4 bg-muted/50 max-h-40 overflow-y-auto">
+                <p className="text-sm font-semibold mb-2">📝 Transcription :</p>
+                <p className="text-sm whitespace-pre-wrap">
+                  {transcript}
+                  {partialTranscript && (
+                    <span className="text-muted-foreground italic">
+                      {transcript && ' '}{partialTranscript}...
+                    </span>
+                  )}
+                </p>
+              </div>
+            )}
+            
+            <Button
+              size="lg"
+              variant="destructive"
+              onClick={stopRecording}
+              className="w-full md:w-auto"
+              aria-label="Arrêter l'enregistrement"
+            >
+              <Square className="mr-2 h-5 w-5" />
+              ⏹️ Arrêter
+            </Button>
+
+            <p className="text-sm text-muted-foreground text-center">
+              Parlez clairement. L'enregistrement s'arrêtera automatiquement après 4 minutes.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Error state
+  if (state === 'error') {
+    return (
+      <Card className="border-destructive">
+        <CardContent className="pt-6">
+          <Alert variant="destructive" className="mb-4">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription className="whitespace-pre-line">
+              {error}
+            </AlertDescription>
+          </Alert>
+          <Button
+            onClick={handleRetry}
+            variant="outline"
+            className="w-full"
+          >
+            <RotateCcw className="mr-2 h-4 w-4" />
+            🔄 Réessayer
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Completed state
+  if (state === 'completed') {
+    return (
+      <Card className="border-green-500">
+        <CardContent className="pt-6 space-y-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-green-700">
+              ✅ Transcription terminée
+            </h3>
+            <Button
+              onClick={handleRetry}
+              variant="ghost"
+              size="sm"
+            >
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Recommencer
+            </Button>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium mb-2 block">
+              Texte transcrit (modifiable)
+            </label>
+            <Textarea
+              value={transcript}
+              onChange={(e) => handleTranscriptEdit(e.target.value)}
+              rows={10}
+              className="w-full"
+              placeholder="Texte transcrit..."
+            />
+          </div>
+
+          <Button
+            onClick={handleValidate}
+            size="lg"
+            className="w-full bg-green-600 hover:bg-green-700"
+            disabled={!transcript.trim()}
+          >
+            <Check className="mr-2 h-5 w-5" />
+            ✅ Valider et utiliser ce texte
+          </Button>
+
+          <p className="text-sm text-muted-foreground text-center">
+            Vérifiez le texte et corrigez si nécessaire avant de valider
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return null;
+};
