@@ -84,6 +84,14 @@ export const VoiceRecorderRealTime = ({ onTranscriptComplete }: VoiceRecorderRea
 
     socketRef.current.on('error', (data) => {
       console.error('❌ Socket error:', data);
+      
+      // Ignorer les messages normaux de fin de stream
+      const message = data.message || '';
+      if (message.includes('EndOfStream') || message.includes('fin=1 opcode=8')) {
+        console.log('ℹ️ Message de fin de stream ignoré (normal)');
+        return;
+      }
+      
       setState('error');
       setError(data.message || 'Une erreur est survenue');
       toast({
