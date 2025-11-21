@@ -18,6 +18,7 @@ interface VoiceRecorderRealTimeProps {
 const PROXY_URL = 'https://speech.crozier-pierre.fr';
 const MAX_DURATION_MS = 4 * 60 * 1000; // 4 minutes
 const WARNING_DURATION_MS = 3 * 60 * 1000; // 3 minutes
+const DEBUG = import.meta.env.DEV; // true en dev, false en prod
 
 export const VoiceRecorderRealTime = ({ onTranscriptComplete }: VoiceRecorderRealTimeProps) => {
   const [state, setState] = useState<RecordingState>('idle');
@@ -38,7 +39,7 @@ export const VoiceRecorderRealTime = ({ onTranscriptComplete }: VoiceRecorderRea
 
   // Setup socket connection
   useEffect(() => {
-    console.log('🔌 Initializing socket connection to:', PROXY_URL);
+    if (DEBUG) console.log('🔌 Initializing socket connection to:', PROXY_URL);
     
     socketRef.current = io(PROXY_URL, {
       transports: ['websocket'],
@@ -46,15 +47,15 @@ export const VoiceRecorderRealTime = ({ onTranscriptComplete }: VoiceRecorderRea
     });
 
     socketRef.current.on('connect', () => {
-      console.log('✅ Socket connected');
+      if (DEBUG) console.log('✅ Socket connected');
     });
 
     socketRef.current.on('connected', (data) => {
-      console.log('📡 Received connected event:', data);
+      if (DEBUG) console.log('📡 Received connected event:', data);
     });
 
     socketRef.current.on('rt_ready', (data) => {
-      console.log('🎤 Speechmatics ready:', data);
+      if (DEBUG) console.log('🎤 Speechmatics ready:', data);
       setState('recording');
       toast({
         title: "🎤 Enregistrement démarré",
@@ -63,14 +64,14 @@ export const VoiceRecorderRealTime = ({ onTranscriptComplete }: VoiceRecorderRea
     });
 
     socketRef.current.on('partial_transcript', (data) => {
-      console.log('📝 Partial transcript:', data);
+      if (DEBUG) console.log('📝 Partial transcript:', data);
       if (data.text) {
         setPartialTranscript(data.text);
       }
     });
 
     socketRef.current.on('final_transcript', (data) => {
-      console.log('✅ Final transcript:', data);
+      if (DEBUG) console.log('✅ Final transcript:', data);
       if (data.text) {
         setTranscript(prev => prev ? `${prev} ${data.text}` : data.text);
         setPartialTranscript('');
@@ -78,17 +79,17 @@ export const VoiceRecorderRealTime = ({ onTranscriptComplete }: VoiceRecorderRea
     });
 
     socketRef.current.on('transcription_ended', () => {
-      console.log('🏁 Transcription ended');
+      if (DEBUG) console.log('🏁 Transcription ended');
       stopRecording();
     });
 
     socketRef.current.on('error', (data) => {
-      console.error('❌ Socket error:', data);
+      if (DEBUG) console.error('❌ Socket error:', data);
       
       // Ignorer les messages normaux de fin de stream
       const message = data.message || '';
       if (message.includes('EndOfStream') || message.includes('fin=1 opcode=8')) {
-        console.log('ℹ️ Message de fin de stream ignoré (normal)');
+        if (DEBUG) console.log('ℹ️ Message de fin de stream ignoré (normal)');
         return;
       }
       
@@ -102,7 +103,7 @@ export const VoiceRecorderRealTime = ({ onTranscriptComplete }: VoiceRecorderRea
     });
 
     return () => {
-      console.log('🧹 Cleaning up socket connection');
+      if (DEBUG) console.log('🧹 Cleaning up socket connection');
       if (timerRef.current) clearInterval(timerRef.current);
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
@@ -134,7 +135,7 @@ export const VoiceRecorderRealTime = ({ onTranscriptComplete }: VoiceRecorderRea
       setError(null);
       setState('connecting');
       
-      console.log('🎤 Requesting microphone access...');
+      if (DEBUG) console.log('🎤 Requesting microphone access...');
       
       // Request microphone access
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -178,7 +179,7 @@ export const VoiceRecorderRealTime = ({ onTranscriptComplete }: VoiceRecorderRea
       processorRef.current.connect(audioContextRef.current.destination);
 
       // Start transcription
-      console.log('📤 Emitting start_transcription');
+      if (DEBUG) console.log('📤 Emitting start_transcription');
       socketRef.current?.emit('start_transcription', {
         language: 'fr',
         userId: user?.id || 'anonymous'
@@ -211,7 +212,7 @@ export const VoiceRecorderRealTime = ({ onTranscriptComplete }: VoiceRecorderRea
       }, 100);
 
     } catch (error) {
-      console.error('❌ Error starting recording:', error);
+      if (DEBUG) console.error('❌ Error starting recording:', error);
       setState('error');
       setError("Impossible d'accéder au microphone. Veuillez autoriser l'accès dans les paramètres de votre navigateur.");
       toast({
@@ -223,7 +224,7 @@ export const VoiceRecorderRealTime = ({ onTranscriptComplete }: VoiceRecorderRea
   };
 
   const stopRecording = () => {
-    console.log('⏹️ Stopping recording...');
+    if (DEBUG) console.log('⏹️ Stopping recording...');
     
     if (timerRef.current) {
       clearInterval(timerRef.current);
