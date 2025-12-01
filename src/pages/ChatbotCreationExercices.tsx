@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { QuickFormValues, ProgramResponse, ChatMessage } from "@/types/exercises";
 
-const WEBHOOK_URL = "https://n8n.crozier-pierre.fr/webhook-test/assistant-exercices";
+const WEBHOOK_URL = "https://n8n.crozier-pierre.fr/webhook/assistant-exercices";
 
 type CallAssistantPayload = {
   sessionId: string;
@@ -23,19 +23,19 @@ type CallAssistantPayload = {
   currentProgram: ProgramResponse | null;
   lockedExerciseIds: string[];
   selectedExerciseIds: string[];
-  action: 'generate' | 'adapt';
+  action: "generate" | "adapt";
   adaptation?: {
     exerciseId?: string;
-    type?: 'easier' | 'harder' | 'fun';
+    type?: "easier" | "harder" | "fun";
     message?: string;
   };
 };
 
 const callExercisesAssistant = async (payload: CallAssistantPayload): Promise<ProgramResponse> => {
   const response = await fetch(WEBHOOK_URL, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
   });
@@ -55,14 +55,16 @@ export default function ChatbotCreationExercices() {
   const [quickFormValues, setQuickFormValues] = useState<QuickFormValues | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [currentProgram, setCurrentProgram] = useState<ProgramResponse | null>(null);
-  const [selectedTab, setSelectedTab] = useState<'chat' | 'programme'>('chat');
+  const [selectedTab, setSelectedTab] = useState<"chat" | "programme">("chat");
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId] = useState(() => `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
-  const [kineId, setKineId] = useState<string>('');
+  const [kineId, setKineId] = useState<string>("");
 
   useEffect(() => {
     const getKineId = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) {
         setKineId(user.id);
       }
@@ -77,14 +79,14 @@ export default function ChatbotCreationExercices() {
     // Ajouter message user
     const userMessage: ChatMessage = {
       id: `msg-${Date.now()}`,
-      role: 'user',
-      content: `Générer un programme ${values.mode === 'quick_session' ? 'pour la séance' : 'à domicile'} : région ${values.region}, phase ${values.phase}, niveau ${values.niveau}.`
+      role: "user",
+      content: `Générer un programme ${values.mode === "quick_session" ? "pour la séance" : "à domicile"} : région ${values.region}, phase ${values.phase}, niveau ${values.niveau}.`,
     };
-    setChatMessages(prev => [...prev, userMessage]);
+    setChatMessages((prev) => [...prev, userMessage]);
 
     try {
-      const lockedExerciseIds = currentProgram?.exercises.filter(ex => ex.locked).map(ex => ex.id) || [];
-      const selectedExerciseIds = currentProgram?.exercises.filter(ex => ex.selected).map(ex => ex.id) || [];
+      const lockedExerciseIds = currentProgram?.exercises.filter((ex) => ex.locked).map((ex) => ex.id) || [];
+      const selectedExerciseIds = currentProgram?.exercises.filter((ex) => ex.selected).map((ex) => ex.id) || [];
 
       const response = await callExercisesAssistant({
         sessionId,
@@ -96,30 +98,30 @@ export default function ChatbotCreationExercices() {
         currentProgram,
         lockedExerciseIds,
         selectedExerciseIds,
-        action: 'generate'
+        action: "generate",
       });
       setCurrentProgram(response);
 
       // Ajouter message assistant
       const assistantMessage: ChatMessage = {
         id: `msg-${Date.now() + 1}`,
-        role: 'assistant',
-        content: `Voici une première proposition de programme avec ${response.exercises.length} exercices adaptés à votre demande.`
+        role: "assistant",
+        content: `Voici une première proposition de programme avec ${response.exercises.length} exercices adaptés à votre demande.`,
       };
-      setChatMessages(prev => [...prev, assistantMessage]);
+      setChatMessages((prev) => [...prev, assistantMessage]);
 
       // Sur mobile, basculer sur l'onglet programme
-      setSelectedTab('programme');
+      setSelectedTab("programme");
 
       toast({
         title: "✅ Programme généré",
-        description: `${response.exercises.length} exercices proposés`
+        description: `${response.exercises.length} exercices proposés`,
       });
     } catch (error) {
       toast({
         title: "❌ Erreur",
         description: "Impossible de générer le programme",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
@@ -134,51 +136,51 @@ export default function ChatbotCreationExercices() {
     // Ajouter message user
     const userMessage: ChatMessage = {
       id: `msg-${Date.now()}`,
-      role: 'user',
-      content: message
+      role: "user",
+      content: message,
     };
-    setChatMessages(prev => [...prev, userMessage]);
+    setChatMessages((prev) => [...prev, userMessage]);
 
     try {
-      const lockedExerciseIds = currentProgram?.exercises.filter(ex => ex.locked).map(ex => ex.id) || [];
-      const selectedExerciseIds = currentProgram?.exercises.filter(ex => ex.selected).map(ex => ex.id) || [];
+      const lockedExerciseIds = currentProgram?.exercises.filter((ex) => ex.locked).map((ex) => ex.id) || [];
+      const selectedExerciseIds = currentProgram?.exercises.filter((ex) => ex.selected).map((ex) => ex.id) || [];
 
       const response = await callExercisesAssistant({
         sessionId,
         kineId,
-        mode: quickFormValues?.mode || 'quick_session',
+        mode: quickFormValues?.mode || "quick_session",
         requestedExercisesCount: quickFormValues?.requestedExercisesCount || 3,
         quickForm: quickFormValues,
         chatHistory: [...chatMessages, userMessage],
         currentProgram,
         lockedExerciseIds,
         selectedExerciseIds,
-        action: 'adapt',
+        action: "adapt",
         adaptation: {
-          message
-        }
+          message,
+        },
       });
       setCurrentProgram(response);
 
       // Ajouter message assistant
       const assistantMessage: ChatMessage = {
         id: `msg-${Date.now() + 1}`,
-        role: 'assistant',
-        content: "J'ai adapté les exercices selon votre demande."
+        role: "assistant",
+        content: "J'ai adapté les exercices selon votre demande.",
       };
-      setChatMessages(prev => [...prev, assistantMessage]);
+      setChatMessages((prev) => [...prev, assistantMessage]);
 
       // Basculer sur programme
-      setSelectedTab('programme');
+      setSelectedTab("programme");
 
       toast({
-        title: "✅ Programme mis à jour"
+        title: "✅ Programme mis à jour",
       });
     } catch (error) {
       toast({
         title: "❌ Erreur",
         description: "Impossible de mettre à jour le programme",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
@@ -189,9 +191,7 @@ export default function ChatbotCreationExercices() {
     if (!currentProgram) return;
     setCurrentProgram({
       ...currentProgram,
-      exercises: currentProgram.exercises.map(ex =>
-        ex.id === id ? { ...ex, selected: !ex.selected } : ex
-      )
+      exercises: currentProgram.exercises.map((ex) => (ex.id === id ? { ...ex, selected: !ex.selected } : ex)),
     });
   };
 
@@ -199,14 +199,12 @@ export default function ChatbotCreationExercices() {
     if (!currentProgram) return;
     setCurrentProgram({
       ...currentProgram,
-      exercises: currentProgram.exercises.map(ex =>
-        ex.id === id ? { ...ex, locked: !ex.locked } : ex
-      )
+      exercises: currentProgram.exercises.map((ex) => (ex.id === id ? { ...ex, locked: !ex.locked } : ex)),
     });
   };
 
-  const handleRequestAdaptation = async (id: string, type: 'easier' | 'harder' | 'fun') => {
-    const exercise = currentProgram?.exercises.find(ex => ex.id === id);
+  const handleRequestAdaptation = async (id: string, type: "easier" | "harder" | "fun") => {
+    const exercise = currentProgram?.exercises.find((ex) => ex.id === id);
     if (!exercise || !quickFormValues) return;
 
     setIsLoading(true);
@@ -214,19 +212,19 @@ export default function ChatbotCreationExercices() {
     const messageMap = {
       easier: `Rends l'exercice "${exercise.titre}" plus facile`,
       harder: `Rends l'exercice "${exercise.titre}" plus difficile`,
-      fun: `Rends l'exercice "${exercise.titre}" plus ludique`
+      fun: `Rends l'exercice "${exercise.titre}" plus ludique`,
     };
 
     const userMessage: ChatMessage = {
       id: `msg-${Date.now()}`,
-      role: 'user',
-      content: messageMap[type]
+      role: "user",
+      content: messageMap[type],
     };
-    setChatMessages(prev => [...prev, userMessage]);
+    setChatMessages((prev) => [...prev, userMessage]);
 
     try {
-      const lockedExerciseIds = currentProgram?.exercises.filter(ex => ex.locked).map(ex => ex.id) || [];
-      const selectedExerciseIds = currentProgram?.exercises.filter(ex => ex.selected).map(ex => ex.id) || [];
+      const lockedExerciseIds = currentProgram?.exercises.filter((ex) => ex.locked).map((ex) => ex.id) || [];
+      const selectedExerciseIds = currentProgram?.exercises.filter((ex) => ex.selected).map((ex) => ex.id) || [];
 
       const response = await callExercisesAssistant({
         sessionId,
@@ -238,32 +236,32 @@ export default function ChatbotCreationExercices() {
         currentProgram,
         lockedExerciseIds,
         selectedExerciseIds,
-        action: 'adapt',
+        action: "adapt",
         adaptation: {
           exerciseId: id,
           type,
-          message: messageMap[type]
-        }
+          message: messageMap[type],
+        },
       });
       setCurrentProgram(response);
 
       const assistantMessage: ChatMessage = {
         id: `msg-${Date.now() + 1}`,
-        role: 'assistant',
-        content: "J'ai adapté l'exercice selon votre demande."
+        role: "assistant",
+        content: "J'ai adapté l'exercice selon votre demande.",
       };
-      setChatMessages(prev => [...prev, assistantMessage]);
+      setChatMessages((prev) => [...prev, assistantMessage]);
 
-      setSelectedTab('programme');
+      setSelectedTab("programme");
 
       toast({
-        title: "✅ Exercice adapté"
+        title: "✅ Exercice adapté",
       });
     } catch (error) {
       toast({
         title: "❌ Erreur",
         description: "Impossible d'adapter l'exercice",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
@@ -275,11 +273,7 @@ export default function ChatbotCreationExercices() {
       <Header />
 
       <main className="container mx-auto px-4 py-8">
-        <Button
-          variant="ghost"
-          onClick={() => navigate("/dashboard")}
-          className="mb-6"
-        >
+        <Button variant="ghost" onClick={() => navigate("/dashboard")} className="mb-6">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Retour au dashboard
         </Button>
@@ -314,18 +308,14 @@ export default function ChatbotCreationExercices() {
           {!currentProgram ? (
             <QuickFormExercises onSubmit={handleQuickFormSubmit} isLoading={isLoading} />
           ) : (
-            <Tabs value={selectedTab} onValueChange={(v) => setSelectedTab(v as 'chat' | 'programme')}>
+            <Tabs value={selectedTab} onValueChange={(v) => setSelectedTab(v as "chat" | "programme")}>
               <TabsList className="grid w-full grid-cols-2 mb-4">
                 <TabsTrigger value="chat">💬 Chat</TabsTrigger>
                 <TabsTrigger value="programme">📋 Programme</TabsTrigger>
               </TabsList>
 
               <TabsContent value="chat" className="h-[calc(100vh-16rem)]">
-                <ChatPanelExercises
-                  messages={chatMessages}
-                  onSendMessage={handleSendMessage}
-                  disabled={isLoading}
-                />
+                <ChatPanelExercises messages={chatMessages} onSendMessage={handleSendMessage} disabled={isLoading} />
               </TabsContent>
 
               <TabsContent value="programme" className="h-[calc(100vh-16rem)]">
