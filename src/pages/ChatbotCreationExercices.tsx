@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
@@ -8,78 +8,44 @@ import { QuickFormExercises } from "@/components/QuickFormExercises";
 import { ChatPanelExercises } from "@/components/ChatPanelExercises";
 import { ProgramPanelExercises } from "@/components/ProgramPanelExercises";
 import { useToast } from "@/hooks/use-toast";
-import type { QuickFormValues, ProgramResponse, ChatMessage, ExerciseSuggestion } from "@/types/exercises";
+import { supabase } from "@/integrations/supabase/client";
+import type { QuickFormValues, ProgramResponse, ChatMessage } from "@/types/exercises";
 
-// TODO: Remplacer par un vrai appel au webhook n8n
-const mockCallExercisesAssistant = async (payload: any): Promise<ProgramResponse> => {
-  // Simuler un délai réseau
-  await new Promise(resolve => setTimeout(resolve, 1500));
+const WEBHOOK_URL = "https://n8n.crozier-pierre.fr/webhook-test/assistant-exercices";
 
-  const mockExercises: ExerciseSuggestion[] = [
-    {
-      id: "ex-001",
-      titre: "Montées sur pointe de pied",
-      descriptionPro: "Renforcement triceps sural en charge, progression possible en unipodal.",
-      descriptionPatient: "Debout face à un mur, montez sur la pointe des pieds puis redescendez doucement.",
-      region: payload.quickForm?.region || "cheville",
-      utilisationClinique: "Renforcement triceps sural et stabilité cheville.",
-      positionExecution: "debout",
-      phase: payload.quickForm?.phase || "subaigue",
-      difficulte: 2,
-      contraintesExclues: ["pas_de_saut"],
-      materiel: ["mur"],
-      gamificationPossible: true,
-      consignesSecurite: "Ne pas dépasser 3/10 de douleur, garder l'appui stable.",
-      variantesProgression: "Passer en unipodal, ajouter un sac à dos chargé.",
-      mediaUrl: null,
-      selected: true,
-      locked: false
-    },
-    {
-      id: "ex-002",
-      titre: "Proprioception sur coussin",
-      descriptionPro: "Travail proprioceptif sur surface instable, sollicitation des stabilisateurs.",
-      descriptionPatient: "Tenez-vous en équilibre sur un coussin ou une surface molle, les yeux ouverts puis fermés.",
-      region: payload.quickForm?.region || "cheville",
-      utilisationClinique: "Rééducation proprioceptive post-entorse.",
-      positionExecution: "debout",
-      phase: payload.quickForm?.phase || "subaigue",
-      difficulte: 3,
-      contraintesExclues: [],
-      materiel: ["coussin", "tapis"],
-      gamificationPossible: true,
-      consignesSecurite: "Se tenir près d'un support en cas de déséquilibre.",
-      variantesProgression: "Yeux fermés, mouvement de bras, lancer de balle.",
-      mediaUrl: null,
-      selected: true,
-      locked: false
-    },
-    {
-      id: "ex-003",
-      titre: "Renforcement isométrique",
-      descriptionPro: "Contraction isométrique contre résistance élastique.",
-      descriptionPatient: "Assis, poussez votre pied contre un élastique dans différentes directions sans bouger la cheville.",
-      region: payload.quickForm?.region || "cheville",
-      utilisationClinique: "Renforcement sans stress articulaire.",
-      positionExecution: "assis",
-      phase: payload.quickForm?.phase || "subaigue",
-      difficulte: 1,
-      contraintesExclues: [],
-      materiel: ["élastique"],
-      gamificationPossible: false,
-      consignesSecurite: "Maintenir 5 secondes, respiration libre.",
-      variantesProgression: "Augmenter la résistance de l'élastique.",
-      mediaUrl: null,
-      selected: true,
-      locked: false
-    }
-  ];
-
-  return {
-    mode: payload.quickForm?.mode || 'quick_session',
-    summary: `Programme pour ${payload.quickForm?.region || 'région'}, phase ${payload.quickForm?.phase || 'subaiguë'}, niveau ${payload.quickForm?.niveau || 'intermédiaire'}.`,
-    exercises: mockExercises
+type CallAssistantPayload = {
+  sessionId: string;
+  kineId: string;
+  mode: string;
+  requestedExercisesCount: number;
+  quickForm: QuickFormValues | null;
+  chatHistory: ChatMessage[];
+  currentProgram: ProgramResponse | null;
+  lockedExerciseIds: string[];
+  selectedExerciseIds: string[];
+  action: 'generate' | 'adapt';
+  adaptation?: {
+    exerciseId?: string;
+    type?: 'easier' | 'harder' | 'fun';
+    message?: string;
   };
+};
+
+const callExercisesAssistant = async (payload: CallAssistantPayload): Promise<ProgramResponse> => {
+  const response = await fetch(WEBHOOK_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Webhook error: ${response.status} ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data;
 };
 
 export default function ChatbotCreationExercices() {
@@ -91,6 +57,18 @@ export default function ChatbotCreationExercices() {
   const [currentProgram, setCurrentProgram] = useState<ProgramResponse | null>(null);
   const [selectedTab, setSelectedTab] = useState<'chat' | 'programme'>('chat');
   const [isLoading, setIsLoading] = useState(false);
+  const [sessionId] = useState(() => `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
+  const [kineId, setKineId] = useState<string>('');
+
+  useEffect(() => {
+    const getKineId = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setKineId(user.id);
+      }
+    };
+    getKineId();
+  }, []);
 
   const handleQuickFormSubmit = async (values: QuickFormValues) => {
     setIsLoading(true);
@@ -105,8 +83,21 @@ export default function ChatbotCreationExercices() {
     setChatMessages(prev => [...prev, userMessage]);
 
     try {
-      // TODO: Appeler le vrai webhook n8n ici
-      const response = await mockCallExercisesAssistant({ quickForm: values });
+      const lockedExerciseIds = currentProgram?.exercises.filter(ex => ex.locked).map(ex => ex.id) || [];
+      const selectedExerciseIds = currentProgram?.exercises.filter(ex => ex.selected).map(ex => ex.id) || [];
+
+      const response = await callExercisesAssistant({
+        sessionId,
+        kineId,
+        mode: values.mode,
+        requestedExercisesCount: values.requestedExercisesCount,
+        quickForm: values,
+        chatHistory: chatMessages,
+        currentProgram,
+        lockedExerciseIds,
+        selectedExerciseIds,
+        action: 'generate'
+      });
       setCurrentProgram(response);
 
       // Ajouter message assistant
@@ -149,11 +140,23 @@ export default function ChatbotCreationExercices() {
     setChatMessages(prev => [...prev, userMessage]);
 
     try {
-      // TODO: Appeler le webhook n8n avec le contexte complet
-      const response = await mockCallExercisesAssistant({
+      const lockedExerciseIds = currentProgram?.exercises.filter(ex => ex.locked).map(ex => ex.id) || [];
+      const selectedExerciseIds = currentProgram?.exercises.filter(ex => ex.selected).map(ex => ex.id) || [];
+
+      const response = await callExercisesAssistant({
+        sessionId,
+        kineId,
+        mode: quickFormValues?.mode || 'quick_session',
+        requestedExercisesCount: quickFormValues?.requestedExercisesCount || 3,
         quickForm: quickFormValues,
+        chatHistory: [...chatMessages, userMessage],
         currentProgram,
-        userMessage: message
+        lockedExerciseIds,
+        selectedExerciseIds,
+        action: 'adapt',
+        adaptation: {
+          message
+        }
       });
       setCurrentProgram(response);
 
@@ -204,7 +207,9 @@ export default function ChatbotCreationExercices() {
 
   const handleRequestAdaptation = async (id: string, type: 'easier' | 'harder' | 'fun') => {
     const exercise = currentProgram?.exercises.find(ex => ex.id === id);
-    if (!exercise) return;
+    if (!exercise || !quickFormValues) return;
+
+    setIsLoading(true);
 
     const messageMap = {
       easier: `Rends l'exercice "${exercise.titre}" plus facile`,
@@ -212,7 +217,57 @@ export default function ChatbotCreationExercices() {
       fun: `Rends l'exercice "${exercise.titre}" plus ludique`
     };
 
-    await handleSendMessage(messageMap[type]);
+    const userMessage: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      role: 'user',
+      content: messageMap[type]
+    };
+    setChatMessages(prev => [...prev, userMessage]);
+
+    try {
+      const lockedExerciseIds = currentProgram?.exercises.filter(ex => ex.locked).map(ex => ex.id) || [];
+      const selectedExerciseIds = currentProgram?.exercises.filter(ex => ex.selected).map(ex => ex.id) || [];
+
+      const response = await callExercisesAssistant({
+        sessionId,
+        kineId,
+        mode: quickFormValues.mode,
+        requestedExercisesCount: quickFormValues.requestedExercisesCount,
+        quickForm: quickFormValues,
+        chatHistory: [...chatMessages, userMessage],
+        currentProgram,
+        lockedExerciseIds,
+        selectedExerciseIds,
+        action: 'adapt',
+        adaptation: {
+          exerciseId: id,
+          type,
+          message: messageMap[type]
+        }
+      });
+      setCurrentProgram(response);
+
+      const assistantMessage: ChatMessage = {
+        id: `msg-${Date.now() + 1}`,
+        role: 'assistant',
+        content: "J'ai adapté l'exercice selon votre demande."
+      };
+      setChatMessages(prev => [...prev, assistantMessage]);
+
+      setSelectedTab('programme');
+
+      toast({
+        title: "✅ Exercice adapté"
+      });
+    } catch (error) {
+      toast({
+        title: "❌ Erreur",
+        description: "Impossible d'adapter l'exercice",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
