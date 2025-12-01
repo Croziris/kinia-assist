@@ -9,7 +9,7 @@ import { ChatPanelExercises } from "@/components/ChatPanelExercises";
 import { ProgramPanelExercises } from "@/components/ProgramPanelExercises";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import type { QuickFormValues, ProgramResponse, ChatMessage } from "@/types/exercises";
+import type { QuickFormValues, ProgramResponse, ChatMessage, AssistantApiResponse } from "@/types/exercises";
 
 const WEBHOOK_URL = "https://n8n.crozier-pierre.fr/webhook/assistant-exercices";
 
@@ -31,7 +31,7 @@ type CallAssistantPayload = {
   };
 };
 
-const callExercisesAssistant = async (payload: CallAssistantPayload): Promise<ProgramResponse> => {
+const callExercisesAssistant = async (payload: CallAssistantPayload): Promise<AssistantApiResponse> => {
   const response = await fetch(WEBHOOK_URL, {
     method: "POST",
     headers: {
@@ -45,7 +45,7 @@ const callExercisesAssistant = async (payload: CallAssistantPayload): Promise<Pr
   }
 
   const data = await response.json();
-  return data;
+  return data as AssistantApiResponse;
 };
 
 export default function ChatbotCreationExercices() {
@@ -88,26 +88,28 @@ export default function ChatbotCreationExercices() {
       const lockedExerciseIds = currentProgram?.exercises.filter((ex) => ex.locked).map((ex) => ex.id) || [];
       const selectedExerciseIds = currentProgram?.exercises.filter((ex) => ex.selected).map((ex) => ex.id) || [];
 
-      const response = await callExercisesAssistant({
+      const apiResponse = await callExercisesAssistant({
         sessionId,
         kineId,
         mode: values.mode,
         requestedExercisesCount: values.requestedExercisesCount,
         quickForm: values,
-        chatHistory: chatMessages,
+        chatHistory: [...chatMessages, userMessage],
         currentProgram,
         lockedExerciseIds,
         selectedExerciseIds,
         action: "generate",
       });
-      console.log("Response from webhook:", response);
-      setCurrentProgram(response);
+      console.log("Response from webhook:", apiResponse);
+      
+      const program = apiResponse.program;
+      setCurrentProgram(program);
 
       // Ajouter message assistant
       const assistantMessage: ChatMessage = {
         id: `msg-${Date.now() + 1}`,
         role: "assistant",
-        content: `Voici une première proposition de programme avec ${response.exercises.length} exercices adaptés à votre demande.`,
+        content: apiResponse.assistantMessage ?? `Voici une première proposition de programme avec ${program.exercises.length} exercices adaptés à votre demande.`,
       };
       setChatMessages((prev) => [...prev, assistantMessage]);
 
@@ -116,7 +118,7 @@ export default function ChatbotCreationExercices() {
 
       toast({
         title: "✅ Programme généré",
-        description: `${response.exercises.length} exercices proposés`,
+        description: `${program.exercises.length} exercices proposés`,
       });
     } catch (error) {
       toast({
@@ -146,7 +148,7 @@ export default function ChatbotCreationExercices() {
       const lockedExerciseIds = currentProgram?.exercises.filter((ex) => ex.locked).map((ex) => ex.id) || [];
       const selectedExerciseIds = currentProgram?.exercises.filter((ex) => ex.selected).map((ex) => ex.id) || [];
 
-      const response = await callExercisesAssistant({
+      const apiResponse = await callExercisesAssistant({
         sessionId,
         kineId,
         mode: quickFormValues?.mode || "quick_session",
@@ -161,13 +163,15 @@ export default function ChatbotCreationExercices() {
           message,
         },
       });
-      setCurrentProgram(response);
+      
+      const program = apiResponse.program;
+      setCurrentProgram(program);
 
       // Ajouter message assistant
       const assistantMessage: ChatMessage = {
         id: `msg-${Date.now() + 1}`,
         role: "assistant",
-        content: "J'ai adapté les exercices selon votre demande.",
+        content: apiResponse.assistantMessage ?? "J'ai adapté les exercices selon votre demande.",
       };
       setChatMessages((prev) => [...prev, assistantMessage]);
 
@@ -227,7 +231,7 @@ export default function ChatbotCreationExercices() {
       const lockedExerciseIds = currentProgram?.exercises.filter((ex) => ex.locked).map((ex) => ex.id) || [];
       const selectedExerciseIds = currentProgram?.exercises.filter((ex) => ex.selected).map((ex) => ex.id) || [];
 
-      const response = await callExercisesAssistant({
+      const apiResponse = await callExercisesAssistant({
         sessionId,
         kineId,
         mode: quickFormValues.mode,
@@ -244,12 +248,14 @@ export default function ChatbotCreationExercices() {
           message: messageMap[type],
         },
       });
-      setCurrentProgram(response);
+      
+      const program = apiResponse.program;
+      setCurrentProgram(program);
 
       const assistantMessage: ChatMessage = {
         id: `msg-${Date.now() + 1}`,
         role: "assistant",
-        content: "J'ai adapté l'exercice selon votre demande.",
+        content: apiResponse.assistantMessage ?? "J'ai adapté l'exercice selon votre demande.",
       };
       setChatMessages((prev) => [...prev, assistantMessage]);
 

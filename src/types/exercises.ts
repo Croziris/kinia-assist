@@ -24,6 +24,13 @@ export type ProgramResponse = {
   exercises: ExerciseSuggestion[];
 };
 
+export type AssistantApiResponse = {
+  sessionId?: string;
+  kineId?: string;
+  assistantMessage?: string;
+  program: ProgramResponse;
+};
+
 export type ChatMessage = {
   id: string;
   role: 'user' | 'assistant' | 'system';
