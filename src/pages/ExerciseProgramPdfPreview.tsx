@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { ProgramResponse, TherapistInfo, PdfGenerationPayload } from "@/types/exercises";
 
-const PDF_WEBHOOK_URL = "https://n8n.crozier-pierre.fr/webhook/assistant-exercices-pdf";
+const PDF_WEBHOOK_URL = "https://n8n.crozier-pierre.fr/webhook-test/assistant-exercices-pdf";
 
 const getDifficultyColor = (difficulte: number) => {
   if (difficulte <= 2) return "bg-green-100 text-green-800";
