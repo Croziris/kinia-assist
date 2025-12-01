@@ -37,7 +37,8 @@ const MATERIEL = [
   "Mur",
   "Élastique",
   "Ballon",
-  "Aucun"
+  "Aucun",
+  "Autre"
 ];
 
 export const QuickFormExercises = ({ onSubmit, isLoading }: QuickFormExercisesProps) => {
@@ -53,10 +54,20 @@ export const QuickFormExercises = ({ onSubmit, isLoading }: QuickFormExercisesPr
     materiel: [],
     commentaires: ''
   });
+  const [autreMateriel, setAutreMateriel] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formValues);
+    
+    // Si "Autre" est sélectionné et qu'il y a du texte, l'ajouter au matériel
+    const finalMateriel = formValues.materiel.includes('Autre') && autreMateriel.trim()
+      ? [...formValues.materiel.filter(m => m !== 'Autre'), autreMateriel.trim()]
+      : formValues.materiel;
+    
+    onSubmit({
+      ...formValues,
+      materiel: finalMateriel
+    });
   };
 
   const toggleArrayValue = (array: string[], value: string) => {
@@ -140,8 +151,8 @@ export const QuickFormExercises = ({ onSubmit, isLoading }: QuickFormExercisesPr
               <SelectContent>
                 <SelectItem value="aigue">Aiguë</SelectItem>
                 <SelectItem value="subaigue">Subaiguë</SelectItem>
-                <SelectItem value="chronique">Chronique</SelectItem>
-                <SelectItem value="retour_sport">Retour au sport</SelectItem>
+                <SelectItem value="reathletisation">Réathlétisation</SelectItem>
+                <SelectItem value="entretien">Chronique / Entretien</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -239,18 +250,33 @@ export const QuickFormExercises = ({ onSubmit, isLoading }: QuickFormExercisesPr
                   <Checkbox
                     id={`materiel-${mat}`}
                     checked={formValues.materiel.includes(mat)}
-                    onCheckedChange={() =>
+                    onCheckedChange={() => {
                       setFormValues({
                         ...formValues,
                         materiel: toggleArrayValue(formValues.materiel, mat)
-                      })
-                    }
+                      });
+                      // Si on décoche "Autre", vider le champ texte
+                      if (mat === 'Autre' && formValues.materiel.includes('Autre')) {
+                        setAutreMateriel('');
+                      }
+                    }}
                   />
                   <Label htmlFor={`materiel-${mat}`} className="font-normal cursor-pointer">
                     {mat}
                   </Label>
                 </div>
               ))}
+              
+              {/* Champ texte libre si "Autre" est coché */}
+              {formValues.materiel.includes('Autre') && (
+                <div className="ml-6 mt-2">
+                  <Input
+                    placeholder="Précisez le matériel..."
+                    value={autreMateriel}
+                    onChange={(e) => setAutreMateriel(e.target.value)}
+                  />
+                </div>
+              )}
             </div>
           </div>
 
