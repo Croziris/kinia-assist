@@ -52,7 +52,8 @@ export const QuickFormExercises = ({ onSubmit, isLoading }: QuickFormExercisesPr
     objectifs: [],
     contraintes: [],
     materiel: [],
-    commentaires: ''
+    commentaires: '',
+    requestedExercisesCount: 3
   });
   const [autreMateriel, setAutreMateriel] = useState('');
 
@@ -189,6 +190,26 @@ export const QuickFormExercises = ({ onSubmit, isLoading }: QuickFormExercisesPr
                 <SelectItem value="debutant">Débutant</SelectItem>
                 <SelectItem value="intermediaire">Intermédiaire</SelectItem>
                 <SelectItem value="avance">Avancé</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Nombre d'exercices */}
+          <div className="space-y-2">
+            <Label htmlFor="requestedExercisesCount">Nombre d'exercices *</Label>
+            <Select
+              value={formValues.requestedExercisesCount.toString()}
+              onValueChange={(value) => setFormValues({ ...formValues, requestedExercisesCount: parseInt(value) })}
+            >
+              <SelectTrigger id="requestedExercisesCount">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">1 exercice</SelectItem>
+                <SelectItem value="2">2 exercices</SelectItem>
+                <SelectItem value="3">3 exercices</SelectItem>
+                <SelectItem value="4">4 exercices</SelectItem>
+                <SelectItem value="5">5 exercices</SelectItem>
               </SelectContent>
             </Select>
           </div>

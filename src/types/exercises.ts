@@ -41,4 +41,5 @@ export type QuickFormValues = {
   contraintes: string[];
   materiel: string[];
   commentaires: string;
+  requestedExercisesCount: number;
 };
