@@ -100,6 +100,7 @@ export default function ChatbotCreationExercices() {
         selectedExerciseIds,
         action: "generate",
       });
+      console.log("Response from webhook:", response);
       setCurrentProgram(response);
 
       // Ajouter message assistant
