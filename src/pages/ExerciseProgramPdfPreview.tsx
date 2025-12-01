@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { ProgramResponse, TherapistInfo, PdfGenerationPayload } from "@/types/exercises";
 
-const PDF_WEBHOOK_URL = "https://n8n.crozier-pierre.fr/webhook/assistant-exercices-pdf";
+const PDF_WEBHOOK_URL = "https://n8n.crozier-pierre.fr/webhook-test/assistant-exercices-pdf";
 
 const getDifficultyColor = (difficulte: number) => {
   if (difficulte <= 2) return "bg-green-100 text-green-800";
@@ -196,9 +196,7 @@ export default function ExerciseProgramPdfPreview() {
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium block mb-2">
-                        Commentaires / Modalités d'exécution
-                      </label>
+                      <label className="text-sm font-medium block mb-2">Commentaires / Modalités d'exécution</label>
                       <Textarea
                         value={commentsByExerciseId[exercise.id] ?? ""}
                         onChange={(e) => handleChangeComment(exercise.id, e.target.value)}
@@ -219,11 +217,7 @@ export default function ExerciseProgramPdfPreview() {
                 <div className="flex gap-4">
                   {therapist.logoUrl && (
                     <div className="flex-shrink-0">
-                      <img
-                        src={therapist.logoUrl}
-                        alt="Logo cabinet"
-                        className="w-16 h-16 object-contain rounded"
-                      />
+                      <img src={therapist.logoUrl} alt="Logo cabinet" className="w-16 h-16 object-contain rounded" />
                     </div>
                   )}
                   <div className="space-y-1 text-sm">
@@ -243,11 +237,7 @@ export default function ExerciseProgramPdfPreview() {
 
             {/* Bouton de téléchargement */}
             <div className="flex justify-end pt-4">
-              <Button
-                onClick={handleDownloadPdf}
-                disabled={isSubmitting || !therapist || !program}
-                size="lg"
-              >
+              <Button onClick={handleDownloadPdf} disabled={isSubmitting || !therapist || !program} size="lg">
                 <Download className="mr-2 h-4 w-4" />
                 {isSubmitting ? "Génération en cours..." : "Télécharger le PDF"}
               </Button>
