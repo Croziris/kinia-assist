@@ -9,6 +9,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Chatbot from "./pages/Chatbot";
 import ChatbotCreationExercices from "./pages/ChatbotCreationExercices";
+import ExerciseProgramPdfPreview from "./pages/ExerciseProgramPdfPreview";
 import Patients from "./pages/Patients";
 import Historique from "./pages/Historique";
 import Parametres from "./pages/Parametres";
@@ -87,6 +88,7 @@ function AppLayout() {
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/chatbot/creation-exercices" element={<ChatbotCreationExercices />} />
+        <Route path="/chatbot/creation-exercices/pdf-preview" element={<ExerciseProgramPdfPreview />} />
         <Route path="/chatbot/:slug" element={<Chatbot />} />
         <Route path="/patients" element={<Patients />} />
         <Route path="/historique" element={<Historique />} />

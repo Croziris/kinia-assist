@@ -50,3 +50,31 @@ export type QuickFormValues = {
   commentaires: string;
   requestedExercisesCount: number;
 };
+
+export type TherapistInfo = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  rppsNumber: string;
+  phone: string;
+  clinicAddress: string;
+  logoUrl?: string | null;
+};
+
+export type ExerciseWithComment = ExerciseSuggestion & {
+  comment?: string;
+};
+
+export type ProgramForPdfPayload = {
+  mode: ProgramResponse["mode"];
+  summary: string;
+  exercises: ExerciseWithComment[];
+};
+
+export type PdfGenerationPayload = {
+  sessionId: string;
+  kineId: string;
+  therapist: TherapistInfo;
+  program: ProgramForPdfPayload;
+};
