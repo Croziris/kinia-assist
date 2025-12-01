@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { QuickFormValues, ProgramResponse, ChatMessage, AssistantApiResponse } from "@/types/exercises";
 
 const WEBHOOK_URL = "https://n8n.crozier-pierre.fr/webhook/assistant-exercices";
+const PDF_WEBHOOK_URL = "https://n8n.crozier-pierre.fr/webhook/assistant-exercices-pdf";
 
 type CallAssistantPayload = {
   sessionId: string;
@@ -275,6 +276,18 @@ export default function ChatbotCreationExercices() {
     }
   };
 
+  const handleOpenPdfPreview = () => {
+    if (!currentProgram) return;
+
+    navigate("/chatbot/creation-exercices/pdf-preview", {
+      state: {
+        sessionId,
+        kineId,
+        program: currentProgram,
+      },
+    });
+  };
+
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0">
       <Header />
@@ -300,14 +313,23 @@ export default function ChatbotCreationExercices() {
           </div>
 
           {/* Colonne droite */}
-          <div className="w-3/5 h-full">
-          <ProgramPanelExercises
-            program={currentProgram}
-            onToggleSelect={handleToggleSelect}
-            onToggleLock={handleToggleLock}
-            onRequestAdaptation={handleRequestAdaptation}
-            isLoading={isLoading}
-          />
+          <div className="w-3/5 h-full flex flex-col">
+            <div className="flex-1 overflow-auto">
+              <ProgramPanelExercises
+                program={currentProgram}
+                onToggleSelect={handleToggleSelect}
+                onToggleLock={handleToggleLock}
+                onRequestAdaptation={handleRequestAdaptation}
+                isLoading={isLoading}
+              />
+            </div>
+            {currentProgram && (
+              <div className="mt-4 flex justify-end border-t pt-4">
+                <Button variant="outline" onClick={handleOpenPdfPreview}>
+                  Générer un PDF
+                </Button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -326,14 +348,21 @@ export default function ChatbotCreationExercices() {
                 <ChatPanelExercises messages={chatMessages} onSendMessage={handleSendMessage} disabled={isLoading} />
               </TabsContent>
 
-              <TabsContent value="programme" className="h-[calc(100vh-16rem)]">
-              <ProgramPanelExercises
-                program={currentProgram}
-                onToggleSelect={handleToggleSelect}
-                onToggleLock={handleToggleLock}
-                onRequestAdaptation={handleRequestAdaptation}
-                isLoading={isLoading}
-              />
+              <TabsContent value="programme" className="h-[calc(100vh-16rem)] flex flex-col">
+                <div className="flex-1 overflow-auto">
+                  <ProgramPanelExercises
+                    program={currentProgram}
+                    onToggleSelect={handleToggleSelect}
+                    onToggleLock={handleToggleLock}
+                    onRequestAdaptation={handleRequestAdaptation}
+                    isLoading={isLoading}
+                  />
+                </div>
+                <div className="mt-4 border-t pt-4">
+                  <Button variant="outline" onClick={handleOpenPdfPreview} className="w-full">
+                    Générer un PDF
+                  </Button>
+                </div>
               </TabsContent>
             </Tabs>
           )}
