@@ -301,12 +301,13 @@ export default function ChatbotCreationExercices() {
 
           {/* Colonne droite */}
           <div className="w-3/5 h-full">
-            <ProgramPanelExercises
-              program={currentProgram}
-              onToggleSelect={handleToggleSelect}
-              onToggleLock={handleToggleLock}
-              onRequestAdaptation={handleRequestAdaptation}
-            />
+          <ProgramPanelExercises
+            program={currentProgram}
+            onToggleSelect={handleToggleSelect}
+            onToggleLock={handleToggleLock}
+            onRequestAdaptation={handleRequestAdaptation}
+            isLoading={isLoading}
+          />
           </div>
         </div>
 
@@ -326,12 +327,13 @@ export default function ChatbotCreationExercices() {
               </TabsContent>
 
               <TabsContent value="programme" className="h-[calc(100vh-16rem)]">
-                <ProgramPanelExercises
-                  program={currentProgram}
-                  onToggleSelect={handleToggleSelect}
-                  onToggleLock={handleToggleLock}
-                  onRequestAdaptation={handleRequestAdaptation}
-                />
+              <ProgramPanelExercises
+                program={currentProgram}
+                onToggleSelect={handleToggleSelect}
+                onToggleLock={handleToggleLock}
+                onRequestAdaptation={handleRequestAdaptation}
+                isLoading={isLoading}
+              />
               </TabsContent>
             </Tabs>
           )}
