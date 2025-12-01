@@ -12,6 +12,7 @@ interface ProgramPanelExercisesProps {
   onToggleSelect: (id: string) => void;
   onToggleLock: (id: string) => void;
   onRequestAdaptation: (id: string, type: 'easier' | 'harder' | 'fun') => void;
+  isLoading: boolean;
 }
 
 const getDifficultyColor = (difficulte: number) => {
@@ -24,7 +25,8 @@ export const ProgramPanelExercises = ({
   program,
   onToggleSelect,
   onToggleLock,
-  onRequestAdaptation
+  onRequestAdaptation,
+  isLoading
 }: ProgramPanelExercisesProps) => {
   if (!program || !program.exercises || program.exercises.length === 0) {
     return (
@@ -97,6 +99,7 @@ export const ProgramPanelExercises = ({
                       size="sm"
                       variant={exercise.locked ? "default" : "outline"}
                       onClick={() => onToggleLock(exercise.id)}
+                      disabled={isLoading}
                     >
                       {exercise.locked ? (
                         <>
@@ -116,6 +119,7 @@ export const ProgramPanelExercises = ({
                           size="sm"
                           variant="ghost"
                           onClick={() => onRequestAdaptation(exercise.id, 'easier')}
+                          disabled={isLoading}
                         >
                           <TrendingDown className="h-3 w-3 mr-1" />
                           Plus facile
@@ -124,6 +128,7 @@ export const ProgramPanelExercises = ({
                           size="sm"
                           variant="ghost"
                           onClick={() => onRequestAdaptation(exercise.id, 'harder')}
+                          disabled={isLoading}
                         >
                           <TrendingUp className="h-3 w-3 mr-1" />
                           Plus difficile
@@ -133,6 +138,7 @@ export const ProgramPanelExercises = ({
                             size="sm"
                             variant="ghost"
                             onClick={() => onRequestAdaptation(exercise.id, 'fun')}
+                            disabled={isLoading}
                           >
                             <Gamepad2 className="h-3 w-3 mr-1" />
                             Plus ludique
