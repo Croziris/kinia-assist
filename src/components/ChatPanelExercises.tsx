@@ -35,9 +35,9 @@ export const ChatPanelExercises = ({ messages, onSendMessage, disabled }: ChatPa
       <CardHeader>
         <CardTitle>💬 Conversation</CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col gap-4 p-4">
-        <ScrollArea className="flex-1 pr-4" ref={scrollRef}>
-          <div className="space-y-4">
+      <CardContent className="flex-1 flex flex-col gap-4 p-4 overflow-hidden">
+        <ScrollArea className="flex-1 min-h-0 pr-4" ref={scrollRef}>
+          <div className="space-y-4 pb-4">
             {messages.length === 0 ? (
               <div className="text-center text-muted-foreground py-8">
                 <p>Générez un premier programme pour commencer la conversation.</p>
