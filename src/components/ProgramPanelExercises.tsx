@@ -26,7 +26,7 @@ export const ProgramPanelExercises = ({
   onToggleLock,
   onRequestAdaptation
 }: ProgramPanelExercisesProps) => {
-  if (!program) {
+  if (!program || !program.exercises || program.exercises.length === 0) {
     return (
       <Card className="h-full">
         <CardHeader>
